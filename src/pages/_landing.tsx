@@ -134,7 +134,10 @@ export default function Landing({
       if (data.authUrl) {
         window.location.href = data.authUrl;
       } else {
-        toast.error(data.error ?? "Sign-in is not configured for this deployment.");
+        const err = data.error ?? "";
+        if (!err.includes(CONFIG_ERROR_PATTERN)) {
+          toast.error(err || "Sign-in is not configured for this deployment.");
+        }
       }
     } catch {
       toast.error("Failed to load sign-in. Please try again.");
