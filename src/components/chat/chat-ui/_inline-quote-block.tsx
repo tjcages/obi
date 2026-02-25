@@ -44,20 +44,20 @@ export function InlineQuoteBlock({ text, from, subject, context }: InlineQuoteBl
           </svg>
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[14px] leading-relaxed text-foreground-100 italic">
+          <p className="text-base leading-relaxed text-foreground-100 italic lg:text-[14px]">
             {text}
           </p>
           {(sender || subject) && (
             <div className="mt-2.5 flex items-center gap-2">
               {sender && avatarColor && (
                 <div
-                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[8px] font-semibold text-white"
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold text-white lg:h-5 lg:w-5 lg:text-[8px]"
                   style={{ backgroundColor: avatarColor }}
                 >
                   {sender.initials}
                 </div>
               )}
-              <span className="text-[12px] text-foreground-300">
+              <span className="text-sm text-foreground-300 lg:text-[12px]">
                 {sender ? sender.name : ""}
                 {sender && subject ? " — " : ""}
                 {subject && <span className="italic">{subject}</span>}
@@ -65,7 +65,7 @@ export function InlineQuoteBlock({ text, from, subject, context }: InlineQuoteBl
             </div>
           )}
           {context && (
-            <p className="mt-2 text-[12px] text-foreground-300/80">
+            <p className="mt-2 text-sm text-foreground-300/80 lg:text-[12px]">
               {context}
             </p>
           )}

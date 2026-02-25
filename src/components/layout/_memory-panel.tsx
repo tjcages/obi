@@ -111,7 +111,7 @@ export function MemoryPanel({ open, onClose, accounts, onAddAccount, onRemoveAcc
           {/* Connected Accounts */}
           {accounts && accounts.length > 0 && (
             <section className="mb-6">
-              <h3 className="mb-2 text-xs font-medium uppercase tracking-widest text-foreground-300">
+              <h3 className="mb-2 text-sm font-medium uppercase tracking-widest text-foreground-300 lg:text-xs">
                 Connected Accounts ({accounts.length})
               </h3>
               <ul className="flex flex-col gap-1.5">
@@ -209,7 +209,7 @@ export function MemoryPanel({ open, onClose, accounts, onAddAccount, onRemoveAcc
                 <button
                   type="button"
                   onClick={onAddAccount}
-                  className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border-100 px-3 py-2 text-xs text-foreground-300 transition-colors hover:border-foreground-300 hover:text-foreground-200"
+                  className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border-100 px-3 py-3 text-sm text-foreground-300 transition-colors hover:border-foreground-300 hover:text-foreground-200 lg:py-2 lg:text-xs"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 5v14" />
@@ -225,7 +225,7 @@ export function MemoryPanel({ open, onClose, accounts, onAddAccount, onRemoveAcc
             <>
               {/* User Facts */}
               <section className="mb-6">
-                <h3 className="mb-2 text-xs font-medium uppercase tracking-widest text-foreground-300">
+                <h3 className="mb-2 text-sm font-medium uppercase tracking-widest text-foreground-300 lg:text-xs">
                   User Facts ({memory.userFacts.length})
                 </h3>
                 {memory.userFacts.length === 0 ? (
@@ -288,7 +288,7 @@ export function MemoryPanel({ open, onClose, accounts, onAddAccount, onRemoveAcc
 
               {/* Conversation Summaries */}
               <section className="mb-6">
-                <h3 className="mb-2 text-xs font-medium uppercase tracking-widest text-foreground-300">
+                <h3 className="mb-2 text-sm font-medium uppercase tracking-widest text-foreground-300 lg:text-xs">
                   Conversation Summaries ({memory.conversationSummaries.length})
                 </h3>
                 {memory.conversationSummaries.length === 0 ? (
