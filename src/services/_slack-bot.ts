@@ -82,6 +82,7 @@ async function initBot(creds: { botToken: string; signingSecret: string }): Prom
   });
 
   bot.onNewMention(async (thread, message) => {
+    console.log("[slack-bot] onNewMention fired!", { threadId: thread.id, messageId: message.id, text: message.text, isMe: message.author.isMe, author: message.author.userId });
     if (message.author.isMe) return;
     const ctx = getContext();
     const adapter = bot.getAdapter("slack");

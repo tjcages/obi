@@ -1936,19 +1936,23 @@ async function handleSlackWebhook(
   }
 
   const body = await request.text();
+  console.log("[slack-webhook] Received POST, body length:", body.length);
 
   // Handle Slack URL verification challenge before anything else.
   // This avoids initializing the full Chat SDK just for the handshake.
   try {
     const payload = JSON.parse(body);
+    console.log("[slack-webhook] Payload type:", payload.type, "event_type:", payload.event?.type);
     if (payload.type === "url_verification" && payload.challenge) {
+      console.log("[slack-webhook] Responding to URL verification challenge");
       return Response.json({ challenge: payload.challenge });
     }
   } catch {
-    // Not JSON or malformed — fall through to adapter
+    console.log("[slack-webhook] Body is not JSON, falling through to adapter");
   }
 
   if (!env.SLACK_BOT_TOKEN || !env.SLACK_SIGNING_SECRET) {
+    console.log("[slack-webhook] Missing credentials — SLACK_BOT_TOKEN:", !!env.SLACK_BOT_TOKEN, "SLACK_SIGNING_SECRET:", !!env.SLACK_SIGNING_SECRET);
     return Response.json(
       { error: "Slack credentials not configured (SLACK_BOT_TOKEN / SLACK_SIGNING_SECRET)" },
       { status: 500 },
@@ -1961,6 +1965,7 @@ async function handleSlackWebhook(
     headers: request.headers,
     body,
   });
+  console.log("[slack-webhook] Forwarding to Chat SDK adapter");
 
   const userId = getCookie(request) ?? "slack-bot";
   const stub = env.INBOX_AGENT.get(env.INBOX_AGENT.idFromName(userId));
