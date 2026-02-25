@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "test:e2e:codemode": "[ -f .dev.vars ] || cp .dev.vars.example .dev.vars; TEST_INJECT_SECRET=dev-secret playwright test e2e/codemode.e2e.ts"
+    "test:e2e:codemode": "[ -f .dev.vars ] || cp .dev.vars.example .dev.vars; TEST_INJECT_SECRET=dev-secret playwright test e2e/codemode.e2e.ts",
+    "add-redirect-uri": "bun scripts/add-redirect-uri.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.46",

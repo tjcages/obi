@@ -1,0 +1,97 @@
+diff --git a/worker/src/keys.ts b/worker/src/keys.ts
+index 44bac28..58301c6 100644
+--- a/worker/src/keys.ts
++++ b/worker/src/keys.ts
+@@ -16,7 +16,7 @@ export type CreateKeyBody = typeof CreateKeyBody.Type;
+ /**
+  * Validate redirect URIs: must be valid URLs with https (or http for localhost).
+  */
+-const validateRedirectUris = (
++export const validateRedirectUris = (
+   uris: readonly string[],
+ ): Effect.Effect<void, ValidationError> => {
+   for (const uri of uris) {
+diff --git a/worker/src/routes/api.ts b/worker/src/routes/api.ts
+index 920efcf..deb3e7a 100644
+--- a/worker/src/routes/api.ts
++++ b/worker/src/routes/api.ts
+@@ -6,7 +6,7 @@ import { authenticateApiKey } from '../auth';
+ import { ValidationError, InvalidCredentialsError } from '../errors';
+ import { runEffectEither } from '../runtime';
+ import { errorToResponse } from '../http';
+-import { createApiKey, CreateKeyBody } from '../keys';
++import { createApiKey, CreateKeyBody, validateRedirectUris } from '../keys';
+ import { generateId } from '../utils';
+ 
+ export const apiRoutes = new Hono<{ Bindings: Env }>();
+@@ -129,6 +129,70 @@ apiRoutes.delete('/keys/:clientId', async (c) => {
+   return c.json(errBody, status as any);
+ });
+ 
++// ───────────────────────────────────────────────────────────────────────────────
++// PATCH /keys/:clientId — add redirect URIs to existing key (requires X-Client-Secret)
++// ───────────────────────────────────────────────────────────────────────────────
++const PatchKeyBody = Schema.Struct({
++  redirect_uris: Schema.Array(Schema.String),
++});
++
++apiRoutes.patch('/keys/:clientId', async (c) => {
++  const clientId = c.req.param('clientId');
++  const clientSecret = c.req.header('X-Client-Secret');
++
++  if (!clientSecret) {
++    return c.json(
++      {
++        error: {
++          code: 'VALIDATION_ERROR',
++          message: 'Missing X-Client-Secret header',
++          action:
++            'Include your client_secret in the X-Client-Secret request header',
++          docs: 'https://inbox.dog/docs/errors#INVALID_CREDENTIALS',
++        },
++      },
++      401,
++    );
++  }
++
++  const raw = await c.req.json().catch(() => ({}));
++
++  const program = Effect.gen(function* () {
++    const body = yield* Schema.decodeUnknown(PatchKeyBody)(raw).pipe(
++      Effect.mapError(
++        () =>
++          new ValidationError({
++            field: 'body',
++            message: 'Invalid request body. Provide redirect_uris array.',
++          }),
++      ),
++    );
++
++    yield* validateRedirectUris(body.redirect_uris);
++
++    const kv = yield* KVService;
++    const apiKey = yield* authenticateApiKey(clientId, clientSecret);
++
++    const existing = apiKey.redirectUris ?? [];
++    const merged = [...new Set([...existing, ...body.redirect_uris])];
++    const updated = { ...apiKey, redirectUris: merged };
++
++    yield* kv.putApiKey(clientId, updated);
++
++    return {
++      client_id: clientId,
++      redirect_uris: merged,
++    };
++  });
++
++  const result = await runEffectEither(program, c.env);
++  if (result.ok) {
++    return c.json(result.value);
++  }
++  const { status, body: errBody } = errorToResponse(result.error);
++  return c.json(errBody, status as any);
++});
++
+ // ───────────────────────────────────────────────────────────────────────────────
+ // GET /tokens — fetch Gmail tokens for web-bound API key (no OAuth in your app)
+ // Auth via X-Client-Secret header. Returns tokens stored at Connect Gmail.
