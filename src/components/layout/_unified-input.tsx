@@ -117,8 +117,8 @@ export function UnifiedInput({
 
     return (
       <div
-        className="fixed inset-x-0 bottom-0 z-50 px-3"
-        style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}
+        className="fixed inset-x-0 bottom-0 z-50 px-3 pb-1"
+        style={{ paddingBottom: "max(4px, env(safe-area-inset-bottom))" }}
         onFocusCapture={() => setSheetExpanded(true)}
         onBlurCapture={(e) => {
           const related = e.relatedTarget as Node | null;
@@ -128,7 +128,7 @@ export function UnifiedInput({
       >
         <motion.div
           layout
-          drag={sheetFocused ? "y" : false}
+          drag="y"
           dragConstraints={{ top: 0, bottom: 0 }}
           dragElastic={{ top: 0, bottom: 0.5 }}
           dragMomentum={false}
@@ -143,30 +143,13 @@ export function UnifiedInput({
             "backdrop-blur-2xl backdrop-saturate-[1.8]",
             "border border-border-100/40 dark:border-white/[0.12]",
             "shadow-[0_4px_30px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_30px_rgba(0,0,0,0.3)]",
-            sheetFocused && "touch-none",
           )}
           transition={{
             layout: { type: "spring", stiffness: 400, damping: 32 },
           }}
         >
-          {/* Drag handle — visible when focused */}
-          <AnimatePresence initial={false}>
-            {sheetFocused && (
-              <motion.div
-                key="drag-handle"
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 16, opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ type: "spring", stiffness: 500, damping: 38 }}
-                className="flex items-end justify-center overflow-hidden"
-              >
-                <div className="mb-1 h-[4px] w-9 rounded-full bg-foreground-300/25" />
-              </motion.div>
-            )}
-          </AnimatePresence>
-
           {/* Input field — always visible, tap to focus directly */}
-          <div className="px-2 pt-1">
+          <div className="px-2 pt-2">
             <motion.div
               className={cn(
                 "overflow-hidden rounded-2xl",
@@ -337,6 +320,7 @@ function ModeToggle({
       <button
         type="button"
         tabIndex={tabIndex}
+        onPointerDown={(e) => e.preventDefault()}
         onClick={() => onModeChange("todo")}
         className={cn(
           "flex items-center gap-1.5 font-medium transition-all",
@@ -357,6 +341,7 @@ function ModeToggle({
       <button
         type="button"
         tabIndex={tabIndex}
+        onPointerDown={(e) => e.preventDefault()}
         onClick={() => onModeChange("chat")}
         className={cn(
           "flex items-center gap-1.5 font-medium transition-all",
