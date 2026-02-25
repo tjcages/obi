@@ -62,7 +62,7 @@ export default {
       return handleMe(request);
     }
 
-    if (path === "/api/webhooks/slack" && env.SLACK_BOT_TOKEN && env.SLACK_SIGNING_SECRET) {
+    if (path === "/api/webhooks/slack") {
       return handleSlackWebhook(request, env, ctx);
     }
     
@@ -1946,6 +1946,13 @@ async function handleSlackWebhook(
     }
   } catch {
     // Not JSON or malformed — fall through to adapter
+  }
+
+  if (!env.SLACK_BOT_TOKEN || !env.SLACK_SIGNING_SECRET) {
+    return Response.json(
+      { error: "Slack credentials not configured (SLACK_BOT_TOKEN / SLACK_SIGNING_SECRET)" },
+      { status: 500 },
+    );
   }
 
   // Clone the request with the already-consumed body so the adapter can read it
