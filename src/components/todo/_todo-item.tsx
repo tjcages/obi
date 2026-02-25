@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
+import { useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/style.css";
-import { cn, getCategoryColor, useSmartInput } from "../../lib";
+import { cn, getCategoryColor, getMonoCategoryColor, getMonoCategories, subscribeMonoCategories, useSmartInput } from "../../lib";
 import type { TodoItem as TodoItemType, SubTask } from "../../lib";
 import { SmartInput, SmartText, type SmartEntity } from "../smart-input";
 import { ScrollFade } from "../ui";
@@ -56,6 +57,7 @@ interface TodoItemProps {
   onDateChange: (id: string, date: string | null) => void;
   onUpdate: (id: string, updates: Partial<Pick<TodoItemType, "title" | "description" | "subtasks" | "categories">>) => void;
   onEmailClick?: (threadId: string, accountEmail?: string) => void;
+  onSlackClick?: (slackRef: TodoItemType["sourceSlack"]) => void;
   onOpenWorkspace?: (category: string) => void;
 }
 
@@ -71,12 +73,14 @@ export function TodoItemComponent({
   onDateChange,
   onUpdate,
   onEmailClick,
+  onSlackClick,
   onOpenWorkspace,
 }: TodoItemProps) {
   const [expanded, setExpanded] = useState(false);
   const [editingTitle, setEditingTitle] = useState(initialEditingTitle);
   const [titleDraft, setTitleDraft] = useState(todo.title);
   const isCompleted = todo.status === "completed";
+  const monoCategories = useSyncExternalStore(subscribeMonoCategories, getMonoCategories, () => false);
   const { contacts, searchContacts, searchEmails } = useSmartInput();
   const subtasks = todo.subtasks ?? [];
   const completedSubtasks = subtasks.filter((s) => s.completed).length;
@@ -198,7 +202,7 @@ export function TodoItemComponent({
             <div className="flex min-w-0 flex-1 items-center gap-1 lg:flex-wrap lg:items-start">
               {/* Categories inline on desktop only */}
               {!hideCategories && todoCategories.map((cat) => {
-                const color = getCategoryColor(cat, availableCategories);
+                const color = monoCategories ? getMonoCategoryColor() : getCategoryColor(cat, availableCategories);
                 return (
                   <button
                     key={cat}
@@ -209,7 +213,7 @@ export function TodoItemComponent({
                       color.bg, color.text,
                       onOpenWorkspace && "hover:opacity-80 cursor-pointer",
                     )}
-                    style={color.style}
+                    style={monoCategories ? undefined : color.style}
                   >
                     {cat}
                   </button>
@@ -257,7 +261,7 @@ export function TodoItemComponent({
             <ScrollFade className="flex shrink-0 items-center gap-1 lg:items-start lg:gap-1">
               {/* Categories on mobile only */}
               {!hideCategories && todoCategories.map((cat) => {
-                const color = getCategoryColor(cat, availableCategories);
+                const color = monoCategories ? getMonoCategoryColor() : getCategoryColor(cat, availableCategories);
                 return (
                   <button
                     key={`m-${cat}`}
@@ -268,7 +272,7 @@ export function TodoItemComponent({
                       color.bg, color.text,
                       onOpenWorkspace && "hover:opacity-80 cursor-pointer",
                     )}
-                    style={color.style}
+                    style={monoCategories ? undefined : color.style}
                   >
                     {cat}
                   </button>
@@ -290,6 +294,23 @@ export function TodoItemComponent({
                   </svg>
                   <span className="max-w-[140px] truncate">
                     {parseSenderName(todo.sourceEmails[0].from)}
+                  </span>
+                </button>
+              )}
+              {todo.sourceSlack && todo.sourceSlack.length > 0 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSlackClick?.(todo.sourceSlack);
+                  }}
+                  className="inline-flex items-center gap-1 rounded bg-[#4A154B]/8 px-1.5 py-0.5 text-[11px] text-[#4A154B] transition-colors hover:bg-[#4A154B]/15 dark:bg-[#4A154B]/20 dark:text-[#E8B4E9] dark:hover:bg-[#4A154B]/30"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
+                    <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zm10.124 2.521a2.528 2.528 0 0 1 2.52-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.52V8.834zm-1.271 0a2.528 2.528 0 0 1-2.521 2.521 2.528 2.528 0 0 1-2.521-2.521V2.522A2.528 2.528 0 0 1 15.166 0a2.528 2.528 0 0 1 2.521 2.522v6.312zm-2.521 10.124a2.528 2.528 0 0 1 2.521 2.52A2.528 2.528 0 0 1 15.166 24a2.528 2.528 0 0 1-2.521-2.522v-2.52h2.521zm0-1.271a2.528 2.528 0 0 1-2.521-2.521 2.528 2.528 0 0 1 2.521-2.521h6.312A2.528 2.528 0 0 1 24 15.166a2.528 2.528 0 0 1-2.522 2.521h-6.312z" />
+                  </svg>
+                  <span className="max-w-[140px] truncate">
+                    {todo.sourceSlack[0].channelName ? `#${todo.sourceSlack[0].channelName}` : "Slack"}
                   </span>
                 </button>
               )}
@@ -327,7 +348,7 @@ export function TodoItemComponent({
           </div>
 
           {/* Inline metadata: subtask progress, AI badge, description preview */}
-          {(hasSubtasks || (todo.agentSuggested && todo.userResponse === "accepted" && todo.sourceEmails.length === 0) || (todo.description && !expanded)) && (
+          {(hasSubtasks || (todo.agentSuggested && todo.userResponse === "accepted" && todo.sourceEmails.length === 0 && (!todo.sourceSlack || todo.sourceSlack.length === 0)) || (todo.description && !expanded)) && (
             <div className="mt-0.5 pb-2 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
               {hasSubtasks && (
                 <span className="inline-flex items-center gap-1 text-[11px] text-foreground-300">
@@ -338,7 +359,7 @@ export function TodoItemComponent({
                   {completedSubtasks}/{subtasks.length}
                 </span>
               )}
-              {todo.agentSuggested && todo.userResponse === "accepted" && todo.sourceEmails.length === 0 && (
+              {todo.agentSuggested && todo.userResponse === "accepted" && todo.sourceEmails.length === 0 && (!todo.sourceSlack || todo.sourceSlack.length === 0) && (
                 <span className="inline-flex items-center gap-0.5 rounded-md bg-purple-50 px-1.5 py-0.5 text-[11px] font-medium text-purple-500 dark:bg-purple-950/30 dark:text-purple-400">
                   <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 16 16" fill="currentColor">
                     <path d="M8 0L9.5 6.5L16 8L9.5 9.5L8 16L6.5 9.5L0 8L6.5 6.5L8 0Z" />
@@ -372,7 +393,7 @@ export function TodoItemComponent({
                 <div className="mb-2">
                   <div className="flex flex-wrap items-center gap-1">
                     {availableCategories.map((cat) => {
-                      const color = getCategoryColor(cat, availableCategories);
+                      const color = monoCategories ? getMonoCategoryColor() : getCategoryColor(cat, availableCategories);
                       const isActive = todoCategories.includes(cat);
                       return (
                         <button
@@ -385,7 +406,7 @@ export function TodoItemComponent({
                               ? `${color.bg} ${color.text} ring-1 ring-current/25`
                               : "bg-foreground-100/5 text-foreground-300 hover:bg-foreground-100/10 hover:text-foreground-200",
                           )}
-                          style={isActive ? color.style : undefined}
+                          style={isActive && !monoCategories ? color.style : undefined}
                         >
                           {cat}
                         </button>

@@ -59,3 +59,30 @@ export function getCategoryColor(cat: string, _allCategories?: string[]): Catego
   }
   return CATEGORY_COLORS[stableHash(cat) % CATEGORY_COLORS.length];
 }
+
+const MONO_CATEGORY_COLOR: CategoryColor = {
+  bg: "bg-foreground-100/[0.04] dark:bg-foreground-100/[0.03]",
+  text: "text-foreground-300",
+  hex: "#888888",
+};
+
+export function getMonoCategoryColor(): CategoryColor {
+  return MONO_CATEGORY_COLOR;
+}
+
+export const MONO_CATEGORIES_CHANGE = "obi:mono-categories-change";
+const MONO_CATEGORIES_KEY = "obi:mono-categories";
+
+export function subscribeMonoCategories(cb: () => void) {
+  window.addEventListener(MONO_CATEGORIES_CHANGE, cb);
+  return () => window.removeEventListener(MONO_CATEGORIES_CHANGE, cb);
+}
+
+export function getMonoCategories(): boolean {
+  return localStorage.getItem(MONO_CATEGORIES_KEY) === "true";
+}
+
+export function setMonoCategories(enabled: boolean) {
+  localStorage.setItem(MONO_CATEGORIES_KEY, String(enabled));
+  window.dispatchEvent(new CustomEvent(MONO_CATEGORIES_CHANGE));
+}

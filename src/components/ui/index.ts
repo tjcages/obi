@@ -12,4 +12,3 @@ export {
   subscribeTheme,
   THEME_CHANGE,
 } from "./_theme-toggle";
-export type { UndoEntry } from "./_undo-toast";

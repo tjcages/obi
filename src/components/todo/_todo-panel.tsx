@@ -60,6 +60,7 @@ interface TodoPanelProps {
   acceptAndCompleteSuggestion: (id: string) => Promise<void>;
   declineSuggestion: (id: string, reason?: string) => Promise<void>;
   onEmailClick?: (threadId: string, accountEmail?: string) => void;
+  onSlackClick?: (slackRef: TodoItem["sourceSlack"]) => void;
   onRefreshSuggestions?: () => void;
   onSaveCategories?: (categories: string[]) => Promise<void>;
   onOpenWorkspace?: (category: string) => void;
@@ -85,6 +86,7 @@ export function TodoPanel({
   declineSuggestion,
   onRefreshSuggestions,
   onEmailClick,
+  onSlackClick,
   onSaveCategories,
   onOpenWorkspace,
   hideCategoryBar,
@@ -224,6 +226,7 @@ export function TodoPanel({
                   onDecline={declineSuggestion}
                   onUpdate={handleUpdate}
                   onEmailClick={onEmailClick}
+                  onSlackClick={onSlackClick}
                 />
               </ListItem>
             ))}
@@ -284,6 +287,7 @@ export function TodoPanel({
                   onDateChange={handleDateChange}
                   onUpdate={handleUpdate}
                   onEmailClick={onEmailClick}
+                  onSlackClick={onSlackClick}
                   onOpenWorkspace={onOpenWorkspace}
                 />
               </ListItem>
@@ -484,6 +488,7 @@ export function TodoPanel({
                         onDateChange={handleDateChange}
                         onUpdate={handleUpdate}
                         onEmailClick={onEmailClick}
+                        onSlackClick={onSlackClick}
                         onOpenWorkspace={onOpenWorkspace}
                       />
                     </ListItem>
@@ -523,6 +528,7 @@ export function TodoPanel({
                   onDateChange={handleDateChange}
                   onUpdate={handleUpdate}
                   onEmailClick={onEmailClick}
+                  onSlackClick={onSlackClick}
                   onOpenWorkspace={onOpenWorkspace}
                 />
               </ListItem>
@@ -584,6 +590,7 @@ export function TodoPanel({
                         onDateChange={handleDateChange}
                         onUpdate={handleUpdate}
                         onEmailClick={onEmailClick}
+                        onSlackClick={onSlackClick}
                         onOpenWorkspace={onOpenWorkspace}
                       />
                     </ListItem>

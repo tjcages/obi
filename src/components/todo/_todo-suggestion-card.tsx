@@ -32,6 +32,7 @@ interface TodoSuggestionCardProps {
   onDecline: (id: string, reason?: string) => void;
   onUpdate: (id: string, updates: Partial<Pick<TodoItem, "title" | "description">>) => void;
   onEmailClick?: (threadId: string, accountEmail?: string) => void;
+  onSlackClick?: (slackRef: TodoItem["sourceSlack"]) => void;
 }
 
 export function TodoSuggestionCard({
@@ -41,6 +42,7 @@ export function TodoSuggestionCard({
   onDecline,
   onUpdate,
   onEmailClick,
+  onSlackClick,
 }: TodoSuggestionCardProps) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(todo.title);
@@ -156,15 +158,20 @@ export function TodoSuggestionCard({
                 const slack = todo.sourceSlack![0];
                 const channel = slack.channelName ? `#${slack.channelName}` : "Slack";
                 return (
-                  <span
-                    className="inline-flex items-center gap-1 rounded-md bg-foreground-100/6 px-1.5 py-0.5 text-[11px] font-medium text-foreground-200"
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSlackClick?.(todo.sourceSlack);
+                    }}
+                    className="inline-flex items-center gap-1 rounded-md bg-[#4A154B]/8 px-1.5 py-0.5 text-[11px] font-medium text-[#4A154B] transition-colors hover:bg-[#4A154B]/15 dark:bg-[#4A154B]/20 dark:text-[#E8B4E9] dark:hover:bg-[#4A154B]/30"
                   >
                     <SlackIcon className="h-3 w-3 shrink-0" />
                     {slack.from}
-                    <span className="text-foreground-300">
+                    <span className="opacity-60">
                       in {channel}
                     </span>
-                  </span>
+                  </button>
                 );
               })()}
               {todo.scheduledDate && (

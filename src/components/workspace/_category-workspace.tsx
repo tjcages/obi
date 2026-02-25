@@ -36,6 +36,7 @@ interface CategoryWorkspaceProps {
   onChangeCustomColor?: (category: string, hex: string | null) => void;
   onDeleteCategory?: (category: string) => void;
   customCategoryColors?: Record<string, string>;
+  hideDesktopResources?: boolean;
 }
 
 export function CategoryWorkspace({
@@ -56,6 +57,7 @@ export function CategoryWorkspace({
   onChangeCustomColor,
   onDeleteCategory,
   customCategoryColors,
+  hideDesktopResources,
 }: CategoryWorkspaceProps) {
   const color = getCategoryColor(category, allCategories);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -431,23 +433,25 @@ export function CategoryWorkspace({
         />
       )}
 
-      {/* Resources: inline collapsible on mobile, fixed sidebar on desktop */}
+      {/* Resources: inline collapsible on mobile, sidebar on desktop */}
       {(hasFiles || hasLinks) && (
         <>
-          <div className="lg:hidden">
+          <div className={hideDesktopResources ? "" : "lg:hidden"}>
             <InlineResources
               fileItems={fileItems}
               linkItems={linkItems}
               onDelete={ws.deleteItem}
             />
           </div>
-          <div className="hidden lg:block">
-            <ResourcesSidebar
-              fileItems={fileItems}
-              linkItems={linkItems}
-              onDelete={ws.deleteItem}
-            />
-          </div>
+          {!hideDesktopResources && (
+            <div className="hidden lg:block">
+              <ResourcesSidebar
+                fileItems={fileItems}
+                linkItems={linkItems}
+                onDelete={ws.deleteItem}
+              />
+            </div>
+          )}
         </>
       )}
 
@@ -1000,7 +1004,7 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function ResourcesSidebar({
+export function ResourcesSidebar({
   fileItems,
   linkItems,
   onDelete,
@@ -1013,7 +1017,7 @@ function ResourcesSidebar({
   const hasLinks = linkItems.length > 0;
 
   return (
-    <aside className="group/resources fixed right-4 top-[calc(2rem+56px)] z-10 h-fit w-[260px] shrink-0">
+    <aside className="group/resources sticky top-0 z-10 h-fit w-full shrink-0 pt-8">
       {/* Links section */}
       {hasLinks && (
         <>

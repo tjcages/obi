@@ -77,7 +77,9 @@ interface UseTodosReturn {
   uncompleteTodo: (id: string) => Promise<void>;
   reorderTodos: (orderedIds: string[]) => Promise<void>;
   acceptSuggestion: (id: string) => Promise<void>;
+  unacceptSuggestion: (id: string) => Promise<void>;
   declineSuggestion: (id: string, reason?: string) => Promise<void>;
+  undeclineSuggestion: (id: string, originalTodo: TodoItem) => Promise<void>;
   saveCategories: (categories: string[]) => Promise<void>;
   saveCategoryColor: (category: string, hex: string | null) => Promise<void>;
 }
@@ -335,11 +337,26 @@ export function useTodos(): UseTodosReturn {
 
   const acceptSuggestion = useCallback(async (id: string) => {
     pendingMutations.current++;
-    setTodos((prev) =>
-      prev.map((t) => t.id === id ? { ...t, status: "pending" as const, userResponse: "accepted" as const } : t),
-    );
+    setTodos((prev) => {
+      const minOrder = Math.min(0, ...prev.filter((t) => t.status === "pending").map((t) => t.sortOrder)) - 1;
+      return prev.map((t) => t.id === id ? { ...t, status: "pending" as const, userResponse: "accepted" as const, sortOrder: minOrder } : t);
+    });
     try {
       await fetch(`/api/todos/${id}/accept`, { method: "POST" });
+    } catch {
+      await refresh();
+    } finally {
+      pendingMutations.current--;
+    }
+  }, [refresh]);
+
+  const unacceptSuggestion = useCallback(async (id: string) => {
+    pendingMutations.current++;
+    setTodos((prev) =>
+      prev.map((t) => t.id === id ? { ...t, status: "suggested" as const, userResponse: null, completedAt: undefined } : t),
+    );
+    try {
+      await fetch(`/api/todos/${id}/unaccept`, { method: "POST" });
     } catch {
       await refresh();
     } finally {
@@ -356,6 +373,21 @@ export function useTodos(): UseTodosReturn {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason }),
       });
+    } catch {
+      await refresh();
+    } finally {
+      pendingMutations.current--;
+    }
+  }, [refresh]);
+
+  const undeclineSuggestion = useCallback(async (id: string, originalTodo: TodoItem) => {
+    pendingMutations.current++;
+    setTodos((prev) => {
+      if (prev.some((t) => t.id === id)) return prev;
+      return [...prev, { ...originalTodo, status: "suggested" as const, userResponse: null, declinedReason: undefined, archivedAt: undefined }];
+    });
+    try {
+      await fetch(`/api/todos/${id}/undecline`, { method: "POST" });
     } catch {
       await refresh();
     } finally {
@@ -417,7 +449,9 @@ export function useTodos(): UseTodosReturn {
     uncompleteTodo,
     reorderTodos,
     acceptSuggestion,
+    unacceptSuggestion,
     declineSuggestion,
+    undeclineSuggestion,
     saveCategories,
     saveCategoryColor,
   };

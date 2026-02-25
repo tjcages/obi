@@ -50,7 +50,7 @@ export function ConversationSidebar({
   return (
     <aside className={cn(
       "flex flex-col",
-      isMobile ? "h-full w-full" : "sticky top-4 h-fit w-[240px] shrink-0 pt-8",
+      isMobile ? "h-full w-full" : "sticky top-4 h-fit w-full shrink-0 pt-8",
     )}>
       {/* Header — hidden on mobile since the drawer has its own title */}
       {!isMobile && (

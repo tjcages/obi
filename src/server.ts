@@ -168,6 +168,14 @@ export default {
       return handleEmailSearch(request, env);
     }
 
+    if (path === "/api/slack/threads" && request.method === "GET") {
+      return handleSlackThreadsProxy(request, env);
+    }
+
+    if (path === "/api/slack/archive-thread" && request.method === "POST") {
+      return handleSlackArchiveThread(request, env);
+    }
+
     if (path.startsWith("/api/scan")) {
       return handleScanProxy(request, env, path);
     }
@@ -1849,8 +1857,8 @@ async function handleTodosProxy(
     });
   }
 
-  // Dynamic routes: /api/todos/:id, /api/todos/:id/accept, /api/todos/:id/decline, /api/todos/:id/complete
-  const actionMatch = path.match(/^\/api\/todos\/([^/]+)\/(accept|decline|complete)$/);
+  // Dynamic routes: /api/todos/:id, /api/todos/:id/accept, /api/todos/:id/decline, /api/todos/:id/complete, etc.
+  const actionMatch = path.match(/^\/api\/todos\/([^/]+)\/(accept|unaccept|decline|undecline|complete)$/);
   if (actionMatch && request.method === "POST") {
     const [, id, action] = actionMatch;
     const doRes = await stub.fetch(
@@ -1994,15 +2002,77 @@ async function handleSlackWebhook(
     },
   });
 
-  try {
-    const bot = await getSlackBot({
-      botToken: env.SLACK_BOT_TOKEN,
-      signingSecret: env.SLACK_SIGNING_SECRET,
-    });
-    return await bot.webhooks.slack(clonedRequest, { waitUntil: ctx.waitUntil.bind(ctx) });
-  } finally {
-    clearSlackContext();
+  const bot = await getSlackBot({
+    botToken: env.SLACK_BOT_TOKEN,
+    signingSecret: env.SLACK_SIGNING_SECRET,
+  });
+  // Don't clear context in finally — the Chat SDK dispatches handlers via waitUntil,
+  // so they run after this function returns. Context is overwritten on the next request instead.
+  return await bot.webhooks.slack(clonedRequest, { waitUntil: ctx.waitUntil.bind(ctx) });
+}
+
+async function handleSlackThreadsProxy(request: Request, env: Env): Promise<Response> {
+  const userId = getCookie(request);
+  if (!userId) return new Response(null, { status: 401 });
+
+  // Slack webhook stores threads in the "slack-bot" DO (no auth cookie on incoming webhooks).
+  // Query both the user's DO and the slack-bot DO, merge results.
+  const slackBotStub = env.INBOX_AGENT.get(env.INBOX_AGENT.idFromName("slack-bot"));
+  const userStub = env.INBOX_AGENT.get(env.INBOX_AGENT.idFromName(userId));
+
+  const [slackRes, userRes] = await Promise.all([
+    slackBotStub.fetch(new Request("http://localhost/slack/threads", {
+      method: "GET",
+      headers: { "Content-Type": "application/json", "x-partykit-room": "slack-bot" },
+    })),
+    userStub.fetch(new Request("http://localhost/slack/threads", {
+      method: "GET",
+      headers: { "Content-Type": "application/json", "x-partykit-room": userId },
+    })),
+  ]);
+
+  const slackData = slackRes.ok ? (await slackRes.json() as { threads: unknown[] }) : { threads: [] };
+  const userData = userRes.ok ? (await userRes.json() as { threads: unknown[] }) : { threads: [] };
+
+  // Merge and deduplicate by channelId:threadTs
+  const seen = new Set<string>();
+  const merged: unknown[] = [];
+  for (const t of [...slackData.threads, ...userData.threads]) {
+    const thread = t as { channelId: string; threadTs: string };
+    const key = `${thread.channelId}:${thread.threadTs}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push(t);
+    }
   }
+
+  return Response.json({ threads: merged });
+}
+
+async function handleSlackArchiveThread(request: Request, env: Env): Promise<Response> {
+  const userId = getCookie(request);
+  if (!userId) return new Response(null, { status: 401 });
+
+  const body = (await request.json()) as { channelId: string; threadTs: string };
+
+  const slackBotStub = env.INBOX_AGENT.get(env.INBOX_AGENT.idFromName("slack-bot"));
+  const userStub = env.INBOX_AGENT.get(env.INBOX_AGENT.idFromName(userId));
+
+  const reqBody = JSON.stringify(body);
+  await Promise.all([
+    slackBotStub.fetch(new Request("http://localhost/slack/archive-thread", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-partykit-room": "slack-bot" },
+      body: reqBody,
+    })),
+    userStub.fetch(new Request("http://localhost/slack/archive-thread", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-partykit-room": userId },
+      body: reqBody,
+    })),
+  ]);
+
+  return Response.json({ ok: true });
 }
 
 function parseSender(from: string): { name: string; email: string } {

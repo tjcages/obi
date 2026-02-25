@@ -53,7 +53,9 @@ import {
   completeTodo,
   reorderTodos,
   acceptSuggestion,
+  unacceptSuggestion,
   declineSuggestion,
+  undeclineSuggestion,
   archiveCompletedTodos,
   addSuggestedTodos,
   clearSuggestions,
@@ -92,6 +94,7 @@ import {
   saveSlackConfig,
   loadAllSlackThreads,
   loadUnprocessedThreads,
+  removeSlackThread,
   type SlackConfig,
   type SlackMessage,
 } from "./_slack-storage";
@@ -1087,6 +1090,12 @@ export class InboxAgent extends AIChatAgent<AgentEnv> {
       }).catch(() => {});
       return Response.json({ todo });
     }
+    if (path.match(/^\/todos\/[^/]+\/unaccept$/) && request.method === "POST") {
+      const id = path.split("/")[2];
+      const todo = await unacceptSuggestion(this.ctx.storage, id);
+      if (!todo) return Response.json({ error: "Not found" }, { status: 404 });
+      return Response.json({ todo });
+    }
     if (path.match(/^\/todos\/[^/]+\/decline$/) && request.method === "POST") {
       const id = path.split("/")[2];
       const { reason } = (await request.json().catch(() => ({}))) as { reason?: string };
@@ -1100,6 +1109,12 @@ export class InboxAgent extends AIChatAgent<AgentEnv> {
         reason: reason ?? null,
         sourceEmails: (before ?? todo).sourceEmails.map((e) => e.from).slice(0, 3),
       }).catch(() => {});
+      return Response.json({ todo });
+    }
+    if (path.match(/^\/todos\/[^/]+\/undecline$/) && request.method === "POST") {
+      const id = path.split("/")[2];
+      const todo = await undeclineSuggestion(this.ctx.storage, id);
+      if (!todo) return Response.json({ error: "Not found" }, { status: 404 });
       return Response.json({ todo });
     }
     if (path === "/todos/archived" && request.method === "GET") {
@@ -1208,6 +1223,10 @@ export class InboxAgent extends AIChatAgent<AgentEnv> {
         messages: body.messages,
         receivedAt: new Date().toISOString(),
       });
+      // Kick off Slack scan in the background so todos appear immediately
+      this.ctx.waitUntil(
+        this.runSlackScan().catch((e) => console.error("[slack-scan] Auto-scan after store failed:", e)),
+      );
       return Response.json({ ok: true });
     }
     if (path === "/slack/append-message" && request.method === "POST") {
@@ -1218,6 +1237,11 @@ export class InboxAgent extends AIChatAgent<AgentEnv> {
       };
       await appendSlackMessage(this.ctx.storage, body.channelId, body.threadTs, body.message);
       return Response.json({ ok: true });
+    }
+    if (path === "/slack/archive-thread" && request.method === "POST") {
+      const body = (await request.json()) as { channelId: string; threadTs: string };
+      const removed = await removeSlackThread(this.ctx.storage, body.channelId, body.threadTs);
+      return Response.json({ ok: removed });
     }
 
     if (path === "/email-diagnostics" && request.method === "GET") {
@@ -1368,8 +1392,8 @@ export class InboxAgent extends AIChatAgent<AgentEnv> {
       description: "Render interactive to-do suggestion cards the user can accept or dismiss. You MUST call this PROACTIVELY whenever you spot action items, deadlines, follow-ups, commitments, or requests in emails. Don't wait to be asked — if an email contains something actionable, suggest a todo. Include the sourceEmail so the user can trace back to the original message. IMPORTANT: Before calling this, check the to-do context in your system prompt — do NOT suggest items that duplicate or closely match existing active or pending todos.",
       inputSchema: z.object({
         todos: z.array(z.object({
-          title: z.string().describe("Short actionable title, e.g. 'Reply to Sarah about Q3 budget'"),
-          description: z.string().optional().describe("Additional context about the task"),
+          title: z.string().describe("Self-contained actionable title with specific names and topics, e.g. 'Pay $109.26 Cursor invoice' or 'Reply to Dad re: selling 4Runner'"),
+          description: z.string().optional().describe("ONLY include if there is essential context the title cannot convey (a phone number, specific instructions, etc.). Omit for most items."),
           scheduledDate: z.string().optional().describe("Suggested date in YYYY-MM-DD format"),
           sourceEmail: z.object({
             messageId: z.string(),

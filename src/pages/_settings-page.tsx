@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { useSyncExternalStore } from "react";
 import { getTheme, subscribeTheme, THEME_CHANGE } from "../components";
+import { getMonoCategories, subscribeMonoCategories, setMonoCategories } from "../lib";
 import { AccountAvatar } from "../components/ui/_account-avatar";
 import {
   SectionLabel,
@@ -179,6 +180,7 @@ export default function SettingsPage({ userId }: { userId: string }) {
   const [addToTop, setAddToTop] = useState(true);
 
   const theme = useSyncExternalStore(subscribeTheme, getTheme, getTheme);
+  const monoCategories = useSyncExternalStore(subscribeMonoCategories, getMonoCategories, () => false);
   const initialPromptRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -583,6 +585,13 @@ export default function SettingsPage({ userId }: { userId: string }) {
                   <SettingsCard>
                     <SettingsRow label="Dark Mode" desc="Toggle between light and dark color schemes">
                       <Toggle checked={theme === "dark"} onChange={toggleTheme} />
+                    </SettingsRow>
+                  </SettingsCard>
+                  <div className="mt-5" />
+                  <SectionLabel>To-dos</SectionLabel>
+                  <SettingsCard>
+                    <SettingsRow label="Mono Categories" desc="Use a uniform muted style for category badges instead of colors">
+                      <Toggle checked={monoCategories} onChange={() => setMonoCategories(!monoCategories)} />
                     </SettingsRow>
                   </SettingsCard>
                 </>

@@ -82,18 +82,25 @@ async function initBot(creds: { botToken: string; signingSecret: string }): Prom
   });
 
   bot.onNewMention(async (thread, message) => {
-    console.log("[slack-bot] onNewMention fired!", { threadId: thread.id, messageId: message.id, text: message.text, isMe: message.author.isMe, author: message.author.userId });
+    console.log("[slack-bot] onNewMention fired!", { threadId: thread.id, messageId: message.id, text: message.text, author: message.author.userId });
     if (message.author.isMe) return;
-    const ctx = getContext();
+
+    const ctx = _context;
+    if (!ctx) {
+      console.error("[slack-bot] Context is null — webhook handler cleared it before async handler ran");
+      return;
+    }
+
     const adapter = bot.getAdapter("slack");
+    const t0 = Date.now();
 
     try {
       await adapter.addReaction(thread.id, message.id, emoji.eyes);
     } catch {
-      // Reaction may fail if bot lacks permissions — non-critical
+      // non-critical
     }
 
-    const threadTs = extractThreadTs(thread.id) ?? message.id;
+    const threadTs = extractThreadTs(thread.id) || message.id;
 
     try {
       await ctx.storeThread({
@@ -112,14 +119,17 @@ async function initBot(creds: { botToken: string; signingSecret: string }): Prom
 
       await thread.subscribe();
 
+      const elapsed = Date.now() - t0;
+      if (elapsed < 1500) await new Promise((r) => setTimeout(r, 1500 - elapsed));
+
+      try { await adapter.removeReaction(thread.id, message.id, emoji.eyes); } catch { /* ignore */ }
       await adapter.addReaction(thread.id, message.id, emoji.check);
     } catch (e) {
-      console.error("[slack-bot] Failed to store thread:", e);
-      try {
-        await adapter.addReaction(thread.id, message.id, "sos");
-      } catch {
-        // ignore
-      }
+      console.error("[slack-bot] Failed to store thread:", e instanceof Error ? e.message : e);
+      const elapsed = Date.now() - t0;
+      if (elapsed < 1500) await new Promise((r) => setTimeout(r, 1500 - elapsed));
+      try { await adapter.removeReaction(thread.id, message.id, emoji.eyes); } catch { /* ignore */ }
+      try { await adapter.addReaction(thread.id, message.id, "sos"); } catch { /* ignore */ }
     }
   });
 
@@ -127,7 +137,7 @@ async function initBot(creds: { botToken: string; signingSecret: string }): Prom
     if (message.author.isMe) return;
     const ctx = getContext();
 
-    const threadTs = extractThreadTs(thread.id) ?? message.id;
+    const threadTs = extractThreadTs(thread.id) || message.id;
 
     try {
       await ctx.appendMessage(

@@ -129,6 +129,20 @@ export async function markThreadsProcessed(
   await saveThreads(storage, threads);
 }
 
+export async function removeSlackThread(
+  storage: DurableObjectStorage,
+  channelId: string,
+  threadTs: string,
+): Promise<boolean> {
+  const threads = await loadThreads(storage);
+  const key = threadKey(channelId, threadTs);
+  const idx = threads.findIndex((t) => threadKey(t.channelId, t.threadTs) === key);
+  if (idx < 0) return false;
+  threads.splice(idx, 1);
+  await saveThreads(storage, threads);
+  return true;
+}
+
 export async function loadAllSlackThreads(
   storage: DurableObjectStorage,
 ): Promise<SlackThread[]> {

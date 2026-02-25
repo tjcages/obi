@@ -1,4 +1,4 @@
-export { CategoryWorkspace } from "./_category-workspace";
+export { CategoryWorkspace, ResourcesSidebar } from "./_category-workspace";
 export { CategorySettings, type DefaultMode } from "./_category-settings";
 export { FeedComposer } from "./_feed-composer";
 export { FeedTimeline } from "./_feed-timeline";

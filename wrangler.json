@@ -1,6 +1,7 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "obi",
+  "account_id": "944ca70087298faa2e84783db46162c5",
   "compatibility_date": "2026-01-28",
   "compatibility_flags": ["nodejs_compat"],
   "observability": {

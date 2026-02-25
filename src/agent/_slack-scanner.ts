@@ -3,6 +3,7 @@ import {
   loadTodos,
   loadArchivedTodos,
   loadPreferences,
+  loadCategories,
   addSuggestedTodos,
   type TodoItem,
   type TodoSlackRef,
@@ -52,6 +53,7 @@ function buildSlackClassificationPrompt(
   threads: SlackThread[],
   declinedPatterns: string[],
   acceptedPatterns: string[],
+  existingCategories: string[],
   userFeedback?: string[],
 ): string {
   const threadList = threads
@@ -73,6 +75,10 @@ function buildSlackClassificationPrompt(
   if (userFeedback && userFeedback.length > 0)
     notes += `\n\nLearn from the user's past feedback on your suggestions:\n${userFeedback.join("\n")}`;
 
+  const categoryNote = existingCategories.length > 0
+    ? `\n\nThe user's existing categories: ${existingCategories.join(", ")}. Prefer assigning from these when relevant. You may suggest a new short category if none fit.`
+    : `\n\nNo categories exist yet. You may suggest 1-2 short, lowercase category labels if appropriate (e.g. "work", "design", "eng").`;
+
   return `You are a strict Slack conversation triage filter. Only flag conversations that require a CONCRETE personal action from the user.
 
 CREATE a todo ONLY when the conversation:
@@ -89,7 +95,7 @@ ALWAYS SKIP (return nothing for these):
 - Social/casual chat
 - Status updates that don't require action
 
-When in doubt, SKIP IT. Only surface conversations the user would regret ignoring.${notes}
+When in doubt, SKIP IT. Only surface conversations the user would regret ignoring.${notes}${categoryNote}
 
 Slack threads (the user's bot was @mentioned in each):
 ${threadList}
@@ -98,6 +104,7 @@ Return JSON array. Each object MUST have:
 - "title": A descriptive action including WHO and WHAT, e.g. "Reply to Sarah's design review request in #product", "Follow up with Mike on deployment timeline"
 - "sourceThreadIndex": N (the [N] index of the source thread)
 - "description": 1 sentence with specific context (mention names, topics, or details from the conversation)
+- "categories": array of 1-2 category labels (use existing categories when possible)
 - "scheduledDate": "YYYY-MM-DD" if a deadline is mentioned, otherwise omit
 
 BAD titles: "Check Slack", "Reply to thread", "Follow up"
@@ -111,6 +118,7 @@ function parseClassificationResponse(text: string): Array<{
   title: string;
   description?: string;
   scheduledDate?: string;
+  categories?: string[];
   sourceThreadIndex: number;
 }> {
   try {
@@ -118,7 +126,7 @@ function parseClassificationResponse(text: string): Array<{
     const parsed = JSON.parse(cleaned);
     if (!Array.isArray(parsed)) return [];
     return parsed.filter(
-      (item): item is { title: string; description?: string; scheduledDate?: string; sourceThreadIndex: number } =>
+      (item): item is { title: string; description?: string; scheduledDate?: string; categories?: string[]; sourceThreadIndex: number } =>
         typeof item === "object" &&
         item !== null &&
         typeof item.title === "string" &&
@@ -145,10 +153,11 @@ export async function scanSlackForTodos(
     return { suggested: 0, tokensUsed: 0, threadsScanned: 0, skippedDuplicate: 0 };
   }
 
-  const [activeTodos, archivedTodos, prefs, memoryEvents] = await Promise.all([
+  const [activeTodos, archivedTodos, prefs, existingCategories, memoryEvents] = await Promise.all([
     loadTodos(storage),
     loadArchivedTodos(storage),
     loadPreferences(storage),
+    loadCategories(storage),
     getMemoryEvents(storage).catch(() => [] as Array<{ type: string; detail: string }>),
   ]);
 
@@ -179,6 +188,7 @@ export async function scanSlackForTodos(
     title: string;
     description?: string;
     scheduledDate?: string;
+    categories?: string[];
     thread: SlackThread;
   }> = [];
 
@@ -188,6 +198,7 @@ export async function scanSlackForTodos(
       batch,
       prefs.declinedPatterns,
       prefs.acceptedPatterns,
+      existingCategories,
       todoFeedback,
     );
     console.log(`[slack-scanner] Batch ${b + 1}/${batches.length}: ${batch.length} threads, calling LLM... (${Date.now() - t0}ms)`);
@@ -211,6 +222,7 @@ export async function scanSlackForTodos(
             title: s.title,
             description: s.description,
             scheduledDate: s.scheduledDate,
+            categories: s.categories,
             thread: batch[s.sourceThreadIndex],
           });
         }
@@ -236,7 +248,7 @@ export async function scanSlackForTodos(
     return { suggested: 0, tokensUsed: totalTokens, threadsScanned: threads.length, skippedDuplicate: skipped };
   }
 
-  const todoSuggestions = allSuggestions.map(({ title, description, scheduledDate, thread }) => {
+  const todoSuggestions = allSuggestions.map(({ title, description, scheduledDate, categories, thread }) => {
     const triggerMsg = thread.messages.find((m) => m.ts === thread.triggerMessageTs) ?? thread.messages[0];
     const sourceSlack: TodoSlackRef = {
       channelId: thread.channelId,
@@ -246,7 +258,7 @@ export async function scanSlackForTodos(
       text: truncate(triggerMsg?.text ?? "", 200),
       channelName: thread.channelName,
     };
-    return { title, description, scheduledDate, sourceSlack };
+    return { title, description, scheduledDate, categories, sourceSlack };
   });
 
   console.log(`[slack-scanner] Writing ${todoSuggestions.length} suggestion(s) to storage... (${Date.now() - t0}ms)`);

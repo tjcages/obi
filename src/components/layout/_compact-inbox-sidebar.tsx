@@ -168,7 +168,7 @@ export function CompactInboxSidebar({
   const unreadCount = threads.filter((t) => t.hasUnread && !hiddenThreadIds.has(t.threadId)).length;
 
   return (
-    <aside className="group/inbox sticky top-4 h-fit w-[260px] shrink-0 pt-8">
+    <aside className="group/inbox sticky top-4 h-fit w-full shrink-0 pt-8">
       <div className="sticky top-0 z-20 bg-background-100 px-2 pb-3">
         <div className="flex items-center justify-between px-3">
           <div className="flex items-center gap-2">

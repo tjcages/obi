@@ -11,3 +11,11 @@ export function formatRelative(dateStr: string): string {
   if (diffDays < 7) return `${diffDays}d ago`;
   return date.toLocaleDateString();
 }
+
+/** Strip Slack-style `<@USER_ID>` mentions and clean up whitespace */
+export function cleanSlackText(text: string): string {
+  return text
+    .replace(/<@[A-Z0-9]+>/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}

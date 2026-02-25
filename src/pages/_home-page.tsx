@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { toast } from "sonner";
 import {
   AccountBadges,
   CategoryWorkspace,
+  ResourcesSidebar,
   CompactInboxSidebar,
   ConversationSidebar,
   EmailModal,
@@ -13,6 +13,8 @@ import {
   List,
   ListItem,
   MemoryPanel,
+  SlackSidebar,
+  SlackThreadModal,
   TodoPanel,
   UnifiedInput,
   WeekStrip,
@@ -20,11 +22,11 @@ import {
   type CompactInboxHandle,
   type InboxListHandle,
   type ThreadGroup,
-  type UndoEntry,
 } from "../components";
 import { Drawer } from "../components/ui/_drawer";
 import type { ComposeMode } from "../components/email/_email-modal";
-import { cn, useMediaQuery, useTodos, useSuggestions, useConversations, useAccounts, useScan, useWorkspace, setCustomCategoryColors, getCategoryColor, type TodoItem } from "../lib";
+import type { TodoSlackRef } from "../lib";
+import { cn, useMediaQuery, useTodos, useSuggestions, useConversations, useAccounts, useScan, useWorkspace, useResizablePanel, useUndoRedo, setCustomCategoryColors, getCategoryColor, type TodoItem } from "../lib";
 
 // function formatScanAge(iso: string): string {
 //   const diffMs = Date.now() - new Date(iso).getTime();
@@ -187,6 +189,12 @@ interface HomePageProps {
 export default function HomePage({ userId }: HomePageProps) {
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const isWideDesktop = useMediaQuery("(min-width: 1280px)");
+  const leftPanel = useResizablePanel({
+    storageKey: "obi:left-panel-width",
+    defaultWidth: 260,
+    minWidth: 200,
+    maxWidth: 400,
+  });
   const suggestions = useSuggestions();
   const todoState = useTodos();
 
@@ -214,6 +222,7 @@ export default function HomePage({ userId }: HomePageProps) {
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [selectedAccountEmail, setSelectedAccountEmail] = useState<string | undefined>(undefined);
   const [initialComposeMode, setInitialComposeMode] = useState<ComposeMode | undefined>(undefined);
+  const [slackModalRef, setSlackModalRef] = useState<TodoSlackRef[] | null>(null);
 
   const navigateToCategory = useCallback((category: string | null) => {
     setActiveCategoryWorkspace(category);
@@ -247,12 +256,17 @@ export default function HomePage({ userId }: HomePageProps) {
 
   const inboxListRef = useRef<InboxListHandle>(null);
   const compactInboxRef = useRef<CompactInboxHandle>(null);
-  const [undoStack, setUndoStack] = useState<UndoEntry[]>([]);
-  const [redoStack, setRedoStack] = useState<UndoEntry[]>([]);
-  const undoStackRef = useRef(undoStack);
-  const redoStackRef = useRef(redoStack);
-  undoStackRef.current = undoStack;
-  redoStackRef.current = redoStack;
+  const { pushUndo } = useUndoRedo();
+
+  // ── Escape key ──
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") conv.closeConversation();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [conv.closeConversation]);
 
   // ── Email / archive handlers ──
 
@@ -260,26 +274,6 @@ export default function HomePage({ userId }: HomePageProps) {
     setSelectedThreadId(thread.threadId);
     setSelectedAccountEmail(thread.representative.accountEmail);
   }, []);
-
-  const performUndo = useCallback((entry: UndoEntry) => {
-    entry.onUndo();
-    toast.dismiss(entry.id);
-    setUndoStack((prev) => prev.filter((u) => u.id !== entry.id));
-    setRedoStack((prev) => [...prev, entry]);
-  }, []);
-
-  const pushUndo = useCallback(
-    (entry: UndoEntry) => {
-      setUndoStack((prev) => [...prev, entry]);
-      setRedoStack([]);
-      toast(entry.label, {
-        id: entry.id,
-        duration: 5000,
-        action: { label: "Undo", onClick: () => performUndo(entry) },
-      });
-    },
-    [performUndo],
-  );
 
   const archiveThreads = useCallback(
     (threadIds: string[], accountParams: string[], senderNames: string[], label: string) => {
@@ -289,9 +283,8 @@ export default function HomePage({ userId }: HomePageProps) {
         compactInboxRef.current?.hideThread(threadIds[i]);
       }
 
-      const undoId = `archive-${threadIds.join("-")}-${Date.now()}`;
       pushUndo({
-        id: undoId,
+        id: `archive-${threadIds.join("-")}-${Date.now()}`,
         label,
         onUndo: () => {
           for (let i = 0; i < threadIds.length; i++) {
@@ -300,7 +293,13 @@ export default function HomePage({ userId }: HomePageProps) {
             void fetch(`/api/threads/${threadIds[i]}/unarchive${accountParams[i]}`, { method: "POST" });
           }
         },
-        onRedo: () => archiveThreads(threadIds, accountParams, senderNames, label),
+        onRedo: () => {
+          for (let i = 0; i < threadIds.length; i++) {
+            void fetch(`/api/threads/${threadIds[i]}/archive${accountParams[i]}`, { method: "POST" });
+            inboxListRef.current?.hideThread(threadIds[i]);
+            compactInboxRef.current?.hideThread(threadIds[i]);
+          }
+        },
       });
     },
     [pushUndo],
@@ -350,7 +349,7 @@ export default function HomePage({ userId }: HomePageProps) {
         id: `todo-del-${id}-${Date.now()}`,
         label,
         onUndo: () => void todoState.restoreTodo(todo),
-        onRedo: () => handleDeleteTodoWithUndo(id),
+        onRedo: () => void todoState.deleteTodo(id),
       });
     },
     [todoState, pushUndo],
@@ -370,39 +369,11 @@ export default function HomePage({ userId }: HomePageProps) {
         id: `conv-arch-${id}-${Date.now()}`,
         label,
         onUndo: () => conv.unarchiveConversation(id),
-        onRedo: () => handleArchiveConversationWithUndo(id),
+        onRedo: () => conv.archiveConversation(id),
       });
     },
     [conv, pushUndo],
   );
-
-  // Keyboard shortcuts for undo/redo
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        conv.closeConversation();
-        return;
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
-        const stack = undoStackRef.current;
-        if (stack.length === 0) return;
-        e.preventDefault();
-        performUndo(stack[stack.length - 1]);
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === "z" && e.shiftKey) {
-        const stack = redoStackRef.current;
-        if (stack.length === 0) return;
-        e.preventDefault();
-        const latest = stack[stack.length - 1];
-        setRedoStack((prev) => prev.slice(0, -1));
-        if (latest.onRedo) {
-          latest.onRedo();
-        }
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [performUndo, conv.closeConversation]);
 
   // ── Reply handler (swipe-to-reply opens email modal with compose pre-activated) ──
 
@@ -439,6 +410,17 @@ export default function HomePage({ userId }: HomePageProps) {
     }
   }
 
+  function archiveSourceSlack(todo?: TodoItem) {
+    if (!todo?.sourceSlack?.length) return;
+    for (const ref of todo.sourceSlack) {
+      fetch("/api/slack/archive-thread", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channelId: ref.channelId, threadTs: ref.threadTs }),
+      }).catch(() => {});
+    }
+  }
+
   function unarchiveSourceEmails(todo?: TodoItem) {
     if (!todo?.sourceEmails?.length) return;
     for (const email of todo.sourceEmails) {
@@ -448,14 +430,34 @@ export default function HomePage({ userId }: HomePageProps) {
     }
   }
 
+  function truncateLabel(text: string, max = 30) {
+    return text.length > max ? `${text.slice(0, max)}…` : text;
+  }
+
   const handleAcceptAndComplete = useCallback(
     async (id: string) => {
       const todo = todoState.todos.find((t: TodoItem) => t.id === id);
       await todoState.acceptSuggestion(id);
       await todoState.completeTodo(id);
       archiveSourceEmails(todo);
+      archiveSourceSlack(todo);
+
+      const title = todo?.title ?? "todo";
+      pushUndo({
+        id: `suggest-ac-${id}-${Date.now()}`,
+        label: `Completed "${truncateLabel(title)}"`,
+        onUndo: () => {
+          void todoState.unacceptSuggestion(id);
+          unarchiveSourceEmails(todo);
+        },
+        onRedo: () => {
+          void todoState.acceptSuggestion(id).then(() => todoState.completeTodo(id));
+          archiveSourceEmails(todo);
+          archiveSourceSlack(todo);
+        },
+      });
     },
-    [todoState],
+    [todoState, pushUndo],
   );
 
   const handleCompleteTodo = useCallback(
@@ -463,16 +465,21 @@ export default function HomePage({ userId }: HomePageProps) {
       const todo = todoState.todos.find((t: TodoItem) => t.id === id);
       await todoState.completeTodo(id);
       archiveSourceEmails(todo);
+      archiveSourceSlack(todo);
 
       const title = todo?.title ?? "todo";
       pushUndo({
         id: `todo-done-${id}-${Date.now()}`,
-        label: `Completed "${title.length > 30 ? `${title.slice(0, 30)}…` : title}"`,
+        label: `Completed "${truncateLabel(title)}"`,
         onUndo: () => {
           void todoState.uncompleteTodo(id);
           unarchiveSourceEmails(todo);
         },
-        onRedo: () => void handleCompleteTodo(id),
+        onRedo: () => {
+          void todoState.completeTodo(id);
+          archiveSourceEmails(todo);
+          archiveSourceSlack(todo);
+        },
       });
     },
     [todoState, pushUndo],
@@ -487,12 +494,35 @@ export default function HomePage({ userId }: HomePageProps) {
       const title = todo?.title ?? "todo";
       pushUndo({
         id: `todo-undone-${id}-${Date.now()}`,
-        label: `Uncompleted "${title.length > 30 ? `${title.slice(0, 30)}…` : title}"`,
+        label: `Uncompleted "${truncateLabel(title)}"`,
         onUndo: () => {
           void todoState.completeTodo(id);
           archiveSourceEmails(todo);
         },
-        onRedo: () => void handleUncompleteTodo(id),
+        onRedo: () => {
+          void todoState.uncompleteTodo(id);
+          unarchiveSourceEmails(todo);
+        },
+      });
+    },
+    [todoState, pushUndo],
+  );
+
+  const handleAcceptSuggestion = useCallback(
+    async (id: string) => {
+      const todo = todoState.todos.find((t: TodoItem) => t.id === id);
+      await todoState.acceptSuggestion(id);
+      archiveSourceSlack(todo);
+
+      const title = todo?.title ?? "suggestion";
+      pushUndo({
+        id: `suggest-accept-${id}-${Date.now()}`,
+        label: `Accepted "${truncateLabel(title)}"`,
+        onUndo: () => void todoState.unacceptSuggestion(id),
+        onRedo: () => {
+          void todoState.acceptSuggestion(id);
+          archiveSourceSlack(todo);
+        },
       });
     },
     [todoState, pushUndo],
@@ -500,9 +530,31 @@ export default function HomePage({ userId }: HomePageProps) {
 
   const handleDeclineSuggestion = useCallback(
     async (id: string, reason?: string) => {
+      const todo = todoState.todos.find((t: TodoItem) => t.id === id);
       await todoState.declineSuggestion(id, reason);
+      archiveSourceSlack(todo);
+
+      const title = todo?.title ?? "suggestion";
+      pushUndo({
+        id: `suggest-decline-${id}-${Date.now()}`,
+        label: `Dismissed "${truncateLabel(title)}"`,
+        onUndo: () => {
+          if (todo) void todoState.undeclineSuggestion(id, todo);
+        },
+        onRedo: () => {
+          void todoState.declineSuggestion(id, reason);
+          archiveSourceSlack(todo);
+        },
+      });
     },
-    [todoState],
+    [todoState, pushUndo],
+  );
+
+  const handleSlackClick = useCallback(
+    (refs?: TodoSlackRef[]) => {
+      if (refs?.length) setSlackModalRef(refs);
+    },
+    [],
   );
 
   const [mobileConvDrawerOpen, setMobileConvDrawerOpen] = useState(false);
@@ -541,17 +593,15 @@ export default function HomePage({ userId }: HomePageProps) {
 
       <div className="flex min-h-0 flex-1">
         <main className="min-h-0 flex-1 overflow-y-auto">
-          <div className={cn("pt-4", isDesktop ? "flex px-4" : "mx-auto max-w-2xl px-2")}>
+          <div className={cn("pt-0", isDesktop ? "flex px-4" : "mx-auto max-w-2xl px-2")}>
 
             {/* Desktop left sidebar: compact inbox + conversation list */}
             {isDesktop && (
               <div
-                className="sticky top-12 z-10 shrink-0 self-start overflow-y-auto [&>aside]:static [&>aside]:w-full [&>aside]:pt-0 [&_nav]:max-h-none"
+                className="sticky top-8 z-10 shrink-0 self-start overflow-y-auto overflow-x-hidden [&_aside]:static [&_aside]:pt-0 [&_nav]:max-h-none"
                 style={{
-                  width: 260,
+                  width: leftPanel.width,
                   maxHeight: "calc(100dvh - 1rem - 64px)",
-                  marginRight: isWideDesktop && !chatPanelOpen ? -240 : 12,
-                  transition: "margin-right 0.35s cubic-bezier(0.22, 1, 0.36, 1)",
                 }}
               >
                 <motion.div
@@ -578,6 +628,7 @@ export default function HomePage({ userId }: HomePageProps) {
                     activeAccountEmails={accounts.activeEmails.length > 0 ? accounts.activeEmails : undefined}
                     accountColors={accounts.accountColors}
                   />
+                  <SlackSidebar />
                   <div className="mx-3 my-1 border-t border-foreground-300/10" />
                 </motion.div>
                 <ConversationSidebar
@@ -605,7 +656,7 @@ export default function HomePage({ userId }: HomePageProps) {
                     width: { duration: 0.35, ease: [0.22, 1, 0.36, 1] },
                     opacity: { duration: 0.2, ease: "easeOut" },
                   }}
-                  className="shrink-0 self-start overflow-hidden pt-8"
+                  className="ml-1 shrink-0 self-start overflow-hidden pt-8"
                   style={{ position: "sticky", top: "1rem" }}
                 >
                   <div
@@ -645,8 +696,29 @@ export default function HomePage({ userId }: HomePageProps) {
               )}
             </AnimatePresence>
 
+            {/* Resize handle between left group (sidebar + chat) and main content */}
+            {isDesktop && (
+              <div
+                onMouseDown={leftPanel.handleMouseDown}
+                className={cn(
+                  "sticky top-0 z-20 flex w-12 shrink-0 cursor-col-resize items-center justify-center self-stretch",
+                  "group",
+                )}
+                style={{ maxHeight: "calc(100dvh - 1rem - 64px)" }}
+              >
+                <div
+                  className={cn(
+                    "h-full w-px transition-colors duration-150",
+                    leftPanel.isDragging
+                      ? "bg-accent-100/60"
+                      : "bg-foreground-300/10 group-hover:bg-foreground-300/25",
+                  )}
+                />
+              </div>
+            )}
+
             {/* Main content column */}
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 pl-3">
                 {activeCategoryWorkspace ? (
                   <div className="mx-auto max-w-2xl" key={`workspace-${activeCategoryWorkspace}`}>
                     <CategoryWorkspace
@@ -741,7 +813,7 @@ export default function HomePage({ userId }: HomePageProps) {
                       completeTodo={handleCompleteTodo}
                       uncompleteTodo={handleUncompleteTodo}
                       reorderTodos={todoState.reorderTodos}
-                      acceptSuggestion={todoState.acceptSuggestion}
+                      acceptSuggestion={handleAcceptSuggestion}
                       acceptAndCompleteSuggestion={handleAcceptAndComplete}
                       declineSuggestion={handleDeclineSuggestion}
                       onRefreshSuggestions={() => {
@@ -755,6 +827,7 @@ export default function HomePage({ userId }: HomePageProps) {
                         setSelectedThreadId(threadId);
                         setSelectedAccountEmail(accountEmail);
                       }}
+                      onSlackClick={handleSlackClick}
                       hideCategoryBar={showRightColumn}
                     />
                   </motion.div>
@@ -818,15 +891,13 @@ export default function HomePage({ userId }: HomePageProps) {
                 )}
             </div>
 
-            {/* Right sidebar: calendar + category grid (floats over empty space, doesn't affect centering) */}
+            {/* Right sidebar: calendar + category grid */}
             {showRightColumn && !activeCategoryWorkspace && (
               <div
-                className="sticky top-12 z-10 shrink-0 self-start overflow-y-auto"
+                className="sticky top-0 z-10 shrink-0 self-start overflow-y-auto px-4"
                 style={{
-                  width: 260,
+                  width: 300,
                   maxHeight: "calc(100dvh - 1rem - 64px)",
-                  marginLeft: -248,
-                  transition: "margin-left 0.35s cubic-bezier(0.22, 1, 0.36, 1)",
                 }}
               >
                 <WeekStrip
@@ -866,6 +937,12 @@ export default function HomePage({ userId }: HomePageProps) {
         onPinToWorkspace={activeCategoryWorkspace ? (email) => {
           void activeWorkspace.pinEmail(email);
         } : undefined}
+      />
+
+      <SlackThreadModal
+        open={!!slackModalRef}
+        slackRef={slackModalRef?.[0] ?? null}
+        onDismiss={() => setSlackModalRef(null)}
       />
 
       <MemoryPanel

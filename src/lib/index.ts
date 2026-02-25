@@ -16,7 +16,7 @@ export {
   normalizeConversationId,
   toConversationRoomName,
 } from "./_conversations";
-export { formatRelative } from "./_format";
+export { formatRelative, cleanSlackText } from "./_format";
 export { useAutoScroll, useIsMobile, useMediaQuery } from "./_hooks";
 export {
   clearCookie,
@@ -62,7 +62,20 @@ export {
   type ScanUsage,
 } from "./_use-scan";
 export { useSmartInput } from "./_use-smart-input";
-export { cn, getCategoryColor, setCustomCategoryColors, CATEGORY_COLORS, type CategoryColor } from "./_utils";
+export {
+  cn,
+  getCategoryColor,
+  getMonoCategoryColor,
+  getMonoCategories,
+  setMonoCategories,
+  subscribeMonoCategories,
+  MONO_CATEGORIES_CHANGE,
+  setCustomCategoryColors,
+  CATEGORY_COLORS,
+  type CategoryColor,
+} from "./_utils";
+export { useResizablePanel } from "./_use-resizable-panel";
+export { useUndoRedo, type UndoEntry } from "./_use-undo-redo";
 export {
   useWorkspace,
   type CategoryWorkspace,

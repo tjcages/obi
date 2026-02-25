@@ -196,6 +196,8 @@ export async function acceptSuggestion(
   const todo = items[idx];
   todo.status = "pending";
   todo.userResponse = "accepted";
+  const minOrder = Math.min(0, ...items.filter((t) => t.status === "pending").map((t) => t.sortOrder)) - 1;
+  todo.sortOrder = minOrder;
   await saveTodos(storage, items);
 
   const prefs = await loadPreferences(storage);
@@ -234,6 +236,44 @@ export async function declineSuggestion(
     prefs.declinedPatterns = [...prefs.declinedPatterns, pattern].slice(-MAX_PATTERNS);
     await savePreferences(storage, prefs);
   }
+  return todo;
+}
+
+export async function unacceptSuggestion(
+  storage: DurableObjectStorage,
+  id: string,
+): Promise<TodoItem | null> {
+  const items = await loadTodos(storage);
+  const idx = items.findIndex((t) => t.id === id);
+  if (idx < 0) return null;
+  const todo = items[idx];
+  todo.status = "suggested";
+  todo.userResponse = null;
+  todo.completedAt = undefined;
+  await saveTodos(storage, items);
+  return todo;
+}
+
+export async function undeclineSuggestion(
+  storage: DurableObjectStorage,
+  id: string,
+): Promise<TodoItem | null> {
+  const archived = await loadArchivedTodos(storage);
+  const idx = archived.findIndex((t) => t.id === id);
+  if (idx < 0) return null;
+  const todo = archived[idx];
+  todo.status = "suggested";
+  todo.userResponse = null;
+  todo.declinedReason = undefined;
+  todo.archivedAt = undefined;
+
+  archived.splice(idx, 1);
+  await storage.put(STORAGE_KEY_ARCHIVED, archived);
+
+  const items = await loadTodos(storage);
+  items.push(todo);
+  await saveTodos(storage, items);
+
   return todo;
 }
 
@@ -322,6 +362,7 @@ export async function addSuggestedTodos(
     title: string;
     description?: string;
     scheduledDate?: string;
+    categories?: string[];
     sourceEmail?: {
       messageId: string;
       threadId: string;
@@ -383,6 +424,7 @@ export async function addSuggestedTodos(
     id: generateTodoId(),
     title: s.title,
     description: s.description,
+    categories: s.categories?.length ? s.categories : undefined,
     status: "suggested" as const,
     sourceEmails: s.sourceEmail
       ? [{

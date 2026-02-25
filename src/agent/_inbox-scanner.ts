@@ -212,19 +212,16 @@ When in doubt, SKIP IT. Only surface emails the user would regret ignoring.${not
 Emails (* = unread):
 ${emailList}
 
-CRITICAL: Every title and description you generate MUST reference ONLY names, companies, topics, and actions that actually appear in the corresponding email above. NEVER invent names, companies, or topics. If email [N] is from "Dad" about selling a car, the title must mention "Dad" and "car" — not unrelated people or topics.
+CRITICAL: Every title you generate MUST reference ONLY names, companies, topics, and actions that actually appear in the corresponding email above. NEVER invent names, companies, or topics. If email [N] is from "Dad" about selling a car, the title must mention "Dad" and "car" — not unrelated people or topics.
 
 Return JSON array. Each object MUST have:
-- "title": A descriptive action using ONLY the real sender name and topic from that specific email. Format: "[Action] [sender name] re: [actual topic from email]"
+- "title": The title IS the task. It should be self-contained and specific enough that the user knows exactly what to do without needing extra context. Use ONLY real names and topics from the source email.
 - "sourceEmailIndex": N (the [N] index of the source email — double-check this matches)
-- "description": 1 sentence with specific context (mention names, dates, amounts, or topics from the email)
+- "description": ONLY include if there is essential context the title cannot convey (e.g. a specific dollar amount, a phone number, a deadline date). OMIT the description entirely for most items — the title should do all the work.
 - "scheduledDate": "YYYY-MM-DD" if a deadline is mentioned, otherwise omit
 
-BAD titles (too vague or fabricated): "RSVP", "Reply to email", "Follow up", "Review document"
-GOOD titles (use REAL names/topics from the email):
-- If email [2] is from "John (Acme)" about an invoice → "Pay invoice from John (Acme)"
-- If email [5] is from "Dad" about selling a car → "Contact Toyota dealership re: selling 4Runner (from Dad)"
-- If email [0] is from "Lisa" about Q1 budget → "Reply to Lisa about Q1 budget approval"
+BAD titles: "RSVP", "Reply to email", "Follow up", "Review document", "Check email from John"
+GOOD titles: "Pay $109.26 Cursor invoice", "Reply to Dad re: selling 4Runner to Toyota dealer", "RSVP to Lisa's Q1 budget meeting (Friday)"
 
 If none need action: []
 JSON only:`;
