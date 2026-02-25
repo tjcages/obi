@@ -3,6 +3,7 @@ import { cn } from "../../lib";
 import type { TodoItem } from "../../lib";
 import { SmartText } from "../smart-input";
 import { SwipeableEmailRow } from "../ui/_swipeable-email-row";
+import { TodoCheckbox } from "./_todo-checkbox";
 
 const SlackIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
@@ -100,9 +101,11 @@ export function TodoSuggestionCard({
           <button
             type="button"
             onClick={() => onAcceptAndComplete(todo.id)}
-            className="mt-px flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 border-foreground-300 transition-all hover:border-green-400 hover:bg-green-50 dark:hover:bg-green-950/30"
+            className="mt-px flex shrink-0 items-center justify-center"
             title="Add & mark complete"
-          />
+          >
+            <TodoCheckbox variant="acceptComplete" />
+          </button>
 
           {/* Content */}
           <div className="min-w-0 flex-1">

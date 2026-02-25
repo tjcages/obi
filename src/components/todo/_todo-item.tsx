@@ -9,6 +9,7 @@ import type { TodoItem as TodoItemType, SubTask } from "../../lib";
 import { SmartInput, SmartText, type SmartEntity } from "../smart-input";
 import { ScrollFade } from "../ui";
 import { SwipeableEmailRow } from "../ui/_swipeable-email-row";
+import { TodoCheckbox } from "./_todo-checkbox";
 
 export function localISODate(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -179,20 +180,7 @@ export function TodoItemComponent({
           onClick={() => isCompleted ? onUncomplete(todo.id) : onComplete(todo.id)}
           className="-ml-1 flex h-11 w-11 shrink-0 items-center justify-center"
         >
-          <span
-            className={cn(
-              "flex h-[18px] w-[18px] items-center justify-center rounded-full border-2 transition-all",
-              isCompleted
-                ? "border-green-400 bg-green-400 dark:border-green-500 dark:bg-green-500"
-                : "border-foreground-300 hover:border-blue-400",
-            )}
-          >
-            {isCompleted && (
-              <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            )}
-          </span>
+          <TodoCheckbox completed={isCompleted} />
         </button>
 
         {/* Content */}
@@ -560,21 +548,7 @@ function SubtaskRow({
         disabled={disabled}
         className="flex h-8 w-8 shrink-0 items-center justify-center"
       >
-        <span
-          className={cn(
-            "flex h-3.5 w-3.5 items-center justify-center rounded border transition-all",
-            subtask.completed
-              ? "border-green-400 bg-green-400 dark:border-green-500 dark:bg-green-500"
-              : "border-foreground-300 hover:border-blue-400",
-            disabled && "opacity-50",
-          )}
-        >
-          {subtask.completed && (
-            <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-          )}
-        </span>
+        <TodoCheckbox completed={subtask.completed} size="sm" disabled={disabled} />
       </button>
       <span className={cn(
         "flex-1 text-xs",
@@ -637,8 +611,7 @@ function AddSubtaskInput({ onAdd }: { onAdd: (title: string) => void }) {
 
   return (
     <div className="flex items-center gap-2 py-1">
-      <div className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border border-foreground-300">
-      </div>
+      <TodoCheckbox size="sm" variant="muted" className="shrink-0" />
       <input
         ref={inputRef}
         type="text"

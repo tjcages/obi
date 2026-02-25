@@ -8,6 +8,7 @@ import { ScrollFade } from "../ui";
 import { TodoItemComponent } from "./_todo-item";
 import { TodoSuggestionCard } from "./_todo-suggestion-card";
 import { TodoCalendar } from "./_todo-calendar";
+import { TodoCheckbox } from "./_todo-checkbox";
 
 function todayStr(): string {
   const d = new Date();
@@ -336,7 +337,7 @@ export function TodoPanel({
         {addingTodo ? (
           <div className="mt-1.5 rounded-lg border border-border-100 bg-background-100 px-3 py-2">
             <div className="flex items-center gap-2">
-              <div className="mt-px h-[18px] w-[18px] shrink-0 rounded-full border-2 border-foreground-300/40" />
+              <TodoCheckbox variant="muted" className="mt-px shrink-0" />
               <SmartInput
                 value={newTodoTitle}
                 onChange={(text) => setNewTodoTitle(text)}
