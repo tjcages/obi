@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "deploy": "vite build && wrangler deploy -c dist/gmail_chat/wrangler.json --keep-vars",
+    "deploy": "vite build && wrangler deploy -c dist/obi/wrangler.json --keep-vars",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
