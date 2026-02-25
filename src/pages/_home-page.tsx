@@ -838,7 +838,7 @@ export default function HomePage({ userId }: HomePageProps) {
               </AnimatePresence>
 
               {/* Inbox */}
-              <div className={cn(isDesktop ? "pt-6 pb-16" : "pt-4 pb-28")}>
+              <div className={cn(isDesktop ? "pt-6 pb-16" : "pt-4 pb-40")}>
                 <div className="mb-3 flex items-center justify-between px-1">
                   <h2 className="text-xs font-medium uppercase tracking-widest text-foreground-300">
                     Inbox

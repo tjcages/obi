@@ -104,10 +104,11 @@ export function SmartInput({
     ],
     editorProps: {
       attributes: {
-        class: cn(
+        "class": cn(
           "smart-input-editor outline-none",
           !multiline && "smart-input-single-line",
         ),
+        "enterkeyhint": multiline ? "enter" : "send",
       },
       handleKeyDown: (_view, event) => {
         if (showAutocomplete && popoverRef.current) {
