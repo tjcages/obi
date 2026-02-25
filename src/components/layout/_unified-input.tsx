@@ -148,7 +148,7 @@ export function UnifiedInput({
                   ? "border-accent-100/15"
                   : "border-border-100/30 dark:border-white/[0.06]",
               )}
-              animate={{ minHeight: sheetFocused ? 100 : 44 }}
+              animate={{ minHeight: sheetFocused ? 80 : 44 }}
               transition={{ type: "spring", stiffness: 400, damping: 30 }}
             >
               <SmartInput
@@ -187,6 +187,7 @@ export function UnifiedInput({
                     setNewCatName={setNewCatName}
                     newCatInputRef={newCatInputRef}
                     onSaveCategories={onSaveCategories}
+                    tabIndex={-1}
                   />
                 </div>
               </motion.div>
@@ -210,6 +211,7 @@ export function UnifiedInput({
                       <button
                         key={s}
                         type="button"
+                        tabIndex={-1}
                         onClick={() => {
                           onStartConversation(buildConversationTitle(s), s);
                           setInputValue("");
@@ -227,9 +229,10 @@ export function UnifiedInput({
             )}
           </AnimatePresence>
 
-          {/* Toolbar — always visible, uses existing controls */}
+          {/* Toolbar — always visible, uses existing controls
+              tabIndex={-1} on buttons to prevent iOS form accessory bar (prev/next arrows) */}
           <div className="flex items-center gap-2 px-3 py-2">
-            <ModeToggle mode={inputMode} onModeChange={setInputMode} />
+            <ModeToggle mode={inputMode} onModeChange={setInputMode} tabIndex={-1} />
             <div className="flex-1" />
             {inputMode === "todo" && (
               <DateQuickPicker
@@ -241,6 +244,7 @@ export function UnifiedInput({
               />
             )}
             <button
+              tabIndex={-1}
               type="button"
               onClick={() => {
                 if (inputValue.trim()) {
@@ -371,14 +375,17 @@ export function UnifiedInput({
 function ModeToggle({
   mode,
   onModeChange,
+  tabIndex,
 }: {
   mode: InputMode;
   onModeChange: (mode: InputMode) => void;
+  tabIndex?: number;
 }) {
   return (
     <div className="flex shrink-0 items-center rounded-lg border border-border-100/80 bg-background-100 p-0.5">
       <button
         type="button"
+        tabIndex={tabIndex}
         onClick={() => onModeChange("todo")}
         className={cn(
           "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[12px] font-medium transition-all",
@@ -395,6 +402,7 @@ function ModeToggle({
       </button>
       <button
         type="button"
+        tabIndex={tabIndex}
         onClick={() => onModeChange("chat")}
         className={cn(
           "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[12px] font-medium transition-all",
@@ -435,6 +443,7 @@ function CategoryPills({
   setNewCatName,
   newCatInputRef,
   onSaveCategories,
+  tabIndex,
 }: {
   categories: string[];
   selectedCategories: string[];
@@ -445,6 +454,7 @@ function CategoryPills({
   setNewCatName: (v: string) => void;
   newCatInputRef: RefObject<HTMLInputElement | null>;
   onSaveCategories?: (cats: string[]) => void | Promise<void>;
+  tabIndex?: number;
 }) {
   return (
     <ScrollFade className="flex min-w-0 flex-1 items-center gap-1">
@@ -455,6 +465,7 @@ function CategoryPills({
           <button
             key={cat}
             type="button"
+            tabIndex={tabIndex}
             onClick={() =>
               setSelectedCategories((prev) =>
                 prev.includes(cat)
@@ -478,6 +489,7 @@ function CategoryPills({
         <input
           ref={newCatInputRef}
           type="text"
+          tabIndex={tabIndex}
           value={newCatName}
           onChange={(e) => setNewCatName(e.target.value)}
           onKeyDown={(e) => {
@@ -506,6 +518,7 @@ function CategoryPills({
       ) : onSaveCategories ? (
         <button
           type="button"
+          tabIndex={tabIndex}
           onClick={() => setAddingCategory(true)}
           className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded bg-foreground-100/5 text-foreground-300/60 transition-colors hover:bg-foreground-100/10 hover:text-foreground-200"
           title="Add category"
