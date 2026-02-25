@@ -1024,7 +1024,7 @@ export default function HomePage({ userId }: HomePageProps) {
       )}
 
       {/* Mobile floating bottom sheet input */}
-      {!isDesktop && !activeCategoryWorkspace && (
+      {!isDesktop && !activeCategoryWorkspace && !chatPanelOpen && (
         <UnifiedInput
           suggestions={suggestions}
           categories={todoState.preferences.todoCategories ?? []}
