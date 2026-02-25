@@ -100,12 +100,12 @@ export function Header({
         ) : (
           <>
             {isSingleAccountView && viewingAccount ? (
-              <div className="flex items-center gap-1.5 rounded-full border border-border-100 bg-background-200 px-2.5 py-1">
+              <div className="flex items-center gap-1.5 rounded-full border border-border-100 bg-background-200 px-3 py-1.5 lg:px-2.5 lg:py-1">
                 <span
-                  className="h-2 w-2 rounded-full"
+                  className="h-2.5 w-2.5 rounded-full lg:h-2 lg:w-2"
                   style={{ backgroundColor: viewingAccount.color || "#6d86d3" }}
                 />
-                <span className="text-xs font-medium text-foreground-200">
+                <span className="text-sm font-medium text-foreground-200 lg:text-xs">
                   {viewingAccount.label || viewingAccount.email.split("@")[0]}
                 </span>
                 <button
@@ -184,7 +184,7 @@ export function Header({
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                   </svg>
                   {chatBadge != null && chatBadge > 0 && (
-                    <span className="absolute right-1 top-1 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-accent-100 px-1 text-[9px] font-bold text-white">
+                    <span className="absolute right-0.5 top-0.5 flex h-4.5 min-w-[18px] items-center justify-center rounded-full bg-accent-100 px-1 text-[11px] font-bold text-white lg:right-1 lg:top-1 lg:h-3.5 lg:min-w-[14px] lg:text-[9px]">
                       {chatBadge > 9 ? "9+" : chatBadge}
                     </span>
                   )}
@@ -375,7 +375,7 @@ const ProfileDropdown = forwardRef<HTMLDivElement, ProfileDropdownProps>(
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-sm text-foreground-100">All accounts</div>
-                <div className="text-[11px] text-foreground-300">View merged inbox</div>
+                <div className="text-xs text-foreground-300 lg:text-[11px]">View merged inbox</div>
               </div>
               {activeEmails.length === accounts.length && (
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-blue-500">
@@ -435,12 +435,12 @@ const ProfileDropdown = forwardRef<HTMLDivElement, ProfileDropdownProps>(
                           {account.name || account.label || account.email.split("@")[0]}
                         </span>
                         {isPrimary && (
-                          <span className="shrink-0 rounded bg-background-300 px-1 py-px text-[9px] font-medium text-foreground-200">
+                          <span className="shrink-0 rounded bg-background-300 px-1.5 py-0.5 text-[11px] font-medium text-foreground-200 lg:px-1 lg:py-px lg:text-[9px]">
                             Default
                           </span>
                         )}
                       </div>
-                      <div className="truncate text-[11px] text-foreground-300">
+                      <div className="truncate text-xs text-foreground-300 lg:text-[11px]">
                         {account.email}
                       </div>
                     </div>

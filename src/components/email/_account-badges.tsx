@@ -88,7 +88,7 @@ export function AccountBadges({
             onSelectAll();
           }}
           className={cn(
-            "shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-all",
+            "shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-all lg:px-3 lg:py-1 lg:text-xs",
             allActive
               ? "border-border-100 bg-background-200 text-foreground-100"
               : "border-border-100 text-foreground-300 hover:border-foreground-300 hover:text-foreground-200",
@@ -120,9 +120,9 @@ export function AccountBadges({
                   onChange={(e) => setEditLabel(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Escape") setEditingEmail(null); }}
                   placeholder="Label…"
-                  className="w-24 rounded-full border border-border-100 bg-background-100 px-2.5 py-1 text-xs outline-none focus:border-accent-100"
+                  className="w-28 rounded-full border border-border-100 bg-background-100 px-3 py-1.5 text-sm outline-none focus:border-accent-100 lg:w-24 lg:px-2.5 lg:py-1 lg:text-xs"
                 />
-                <button type="submit" className="text-xs text-accent-100 hover:underline">Save</button>
+                <button type="submit" className="text-sm text-accent-100 hover:underline lg:text-xs">Save</button>
               </motion.form>
             );
           }
@@ -140,7 +140,7 @@ export function AccountBadges({
               onContextMenu={(e) => handleContextMenu(e, account.email)}
               title={account.email}
               className={cn(
-                "group flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all",
+                "group flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-all lg:px-3 lg:py-1 lg:text-xs",
                 isActive
                   ? "border-transparent text-white shadow-sm"
                   : "border-border-100 bg-transparent text-foreground-300 hover:border-foreground-300 hover:text-foreground-200",
@@ -151,12 +151,12 @@ export function AccountBadges({
                 <img
                   src={account.photoUrl}
                   alt=""
-                  className="h-4 w-4 shrink-0 rounded-full object-cover"
+                  className="h-5 w-5 shrink-0 rounded-full object-cover lg:h-4 lg:w-4"
                   referrerPolicy="no-referrer"
                 />
               ) : (
                 <span
-                  className={cn("h-1.5 w-1.5 shrink-0 rounded-full", isActive && "bg-white/60")}
+                  className={cn("h-2 w-2 shrink-0 rounded-full lg:h-1.5 lg:w-1.5", isActive && "bg-white/60")}
                   style={!isActive ? { backgroundColor: color } : undefined}
                 />
               )}
@@ -170,9 +170,9 @@ export function AccountBadges({
         type="button"
         onClick={onAddAccount}
         title="Connect another email"
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-dashed border-border-100 text-foreground-300 transition-colors hover:border-foreground-300 hover:text-foreground-200"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-dashed border-border-100 text-foreground-300 transition-colors hover:border-foreground-300 hover:text-foreground-200 lg:h-7 lg:w-7"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lg:h-3.5 lg:w-3.5">
           <path d="M12 5v14" />
           <path d="M5 12h14" />
         </svg>

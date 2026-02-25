@@ -267,7 +267,7 @@ export function SenderGroupRow({
       <button
         type="button"
         onClick={onToggleExpand}
-        className={cn("group relative flex w-full items-center gap-3 border-b border-border-200 text-left transition-colors hover:bg-background-200/70", compact ? "px-2 py-2.5 lg:px-3" : "px-2.5 py-3 lg:px-4 lg:py-3.5", expanded && "bg-background-200/60")}
+        className={cn("group relative flex w-full items-center gap-3 border-b border-border-200 text-left transition-colors hover:bg-background-200/70", compact ? "px-2 py-3 lg:px-3 lg:py-2.5" : "px-2.5 py-3.5 lg:px-4 lg:py-3.5", expanded && "bg-background-200/60")}
       >
         {/* Left accent bar */}
         <div
@@ -279,20 +279,20 @@ export function SenderGroupRow({
           <div className="relative shrink-0 self-start mt-0.5">
             {/* Stacked card shadows behind the avatar */}
             <div
-              className="absolute left-[3px] top-[3px] h-9 w-9 rounded-full opacity-20"
+              className="absolute left-[3px] top-[3px] h-10 w-10 rounded-full opacity-20 lg:h-9 lg:w-9"
               style={{ backgroundColor: avatarColor }}
             />
             <div
-              className="absolute left-[6px] top-[6px] h-9 w-9 rounded-full opacity-10"
+              className="absolute left-[6px] top-[6px] h-10 w-10 rounded-full opacity-10 lg:h-9 lg:w-9"
               style={{ backgroundColor: avatarColor }}
             />
             <div
-              className="relative flex h-9 w-9 items-center justify-center rounded-full text-xs font-medium text-white ring-2 ring-background-100"
+              className="relative flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium text-white ring-2 ring-background-100 lg:h-9 lg:w-9 lg:text-xs"
               style={{ backgroundColor: avatarColor }}
             >
               {initials}
             </div>
-            <div className="absolute -bottom-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-semibold leading-none text-white ring-1 ring-background-100 dark:bg-blue-500">
+            <div className="absolute -bottom-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-[11px] font-semibold leading-none text-white ring-1 ring-background-100 dark:bg-blue-500 lg:h-[18px] lg:min-w-[18px] lg:text-[10px]">
               {threads.length}
             </div>
           </div>
@@ -300,14 +300,14 @@ export function SenderGroupRow({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             {hasUnread && (
-              <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent-100" />
+              <div className="h-2 w-2 shrink-0 rounded-full bg-accent-100 lg:h-1.5 lg:w-1.5" />
             )}
             <span
-              className={cn("truncate text-sm", hasUnread ? "font-semibold text-foreground-100" : "text-foreground-300")}
+              className={cn("truncate text-base lg:text-sm", hasUnread ? "font-semibold text-foreground-100" : "text-foreground-300")}
             >
               {senderName}
             </span>
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 lg:px-1.5 lg:text-[10px]">
               <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
                 <path d="M16 3h4a2 2 0 0 1 2 2v2H2V5a2 2 0 0 1 2-2h4" />
@@ -319,14 +319,14 @@ export function SenderGroupRow({
                 {accountEmails.map((email) => (
                   <span
                     key={email}
-                    className="h-2 w-2 shrink-0 rounded-full"
+                    className="h-2.5 w-2.5 shrink-0 rounded-full lg:h-2 lg:w-2"
                     style={{ backgroundColor: accountColors![email!] }}
                     title={`via ${email}`}
                   />
                 ))}
               </div>
             )}
-            <span className={cn(showAccountDots ? "ml-1" : "ml-auto", "shrink-0 text-xs text-foreground-300")}>
+            <span className={cn(showAccountDots ? "ml-1" : "ml-auto", "shrink-0 text-sm text-foreground-300 lg:text-xs")}>
               {formatRelative(latestDate)}
             </span>
           </div>
@@ -335,14 +335,14 @@ export function SenderGroupRow({
           {summary && (
             <div className="mt-0.5 flex items-center gap-1.5">
               {summary.total ? (
-                <span className="truncate text-sm text-foreground-200">
+                <span className="truncate text-base text-foreground-200 lg:text-sm">
                   <span className="font-medium">{summary.label}</span>{" "}
                   <span className="font-semibold text-emerald-600 dark:text-emerald-400">
                     {formatCurrency(summary.total.value, summary.total.currency)}
                   </span>
                 </span>
               ) : (
-                <span className="truncate text-sm text-foreground-300">
+                <span className="truncate text-base text-foreground-300 lg:text-sm">
                   {summary.label}
                 </span>
               )}
@@ -351,7 +351,7 @@ export function SenderGroupRow({
 
           {/* Subject preview (most recent) */}
           {!compact && (
-            <div className="mt-0.5 truncate text-xs text-foreground-300/70">
+            <div className="mt-0.5 truncate text-sm text-foreground-300/70 lg:text-xs">
               {threads[0].representative.subject || "(no subject)"}
             </div>
           )}
@@ -386,16 +386,16 @@ export function SenderGroupRow({
           >
             {/* Transaction breakdown when amounts exist */}
             {summary?.amounts && summary.amounts.length >= 2 && (
-              <div className="flex flex-wrap gap-1.5 border-b border-border-200/60 px-4 py-2">
+              <div className="flex flex-wrap gap-1.5 border-b border-border-200/60 px-4 py-2.5 lg:py-2">
                 {summary.amounts.map((a, i) => (
                   <span
                     key={i}
-                    className="inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                    className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 lg:px-2 lg:py-0.5 lg:text-[11px]"
                   >
                     {formatCurrency(a.value, a.currency)}
                   </span>
                 ))}
-                <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 dark:bg-emerald-800/40 dark:text-emerald-300">
+                <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-800/40 dark:text-emerald-300 lg:px-2 lg:py-0.5 lg:text-[11px]">
                   = {formatCurrency(summary.total!.value, summary.total!.currency)}
                 </span>
               </div>
@@ -471,18 +471,18 @@ export function EmailRow({ thread, compact, onClick, index = 0, accountColors }:
       <button
         type="button"
         onClick={() => onClick?.(thread)}
-        className={cn("group flex w-full items-center gap-3 border-b border-border-200 text-left transition-colors last:border-b-0 hover:bg-background-200/70", compact ? "px-2 py-2.5 lg:px-3" : "px-2.5 py-3 lg:px-4 lg:py-3.5")}
+        className={cn("group flex w-full items-center gap-3 border-b border-border-200 text-left transition-colors last:border-b-0 hover:bg-background-200/70", compact ? "px-2 py-3 lg:px-3 lg:py-2.5" : "px-2.5 py-3.5 lg:px-4 lg:py-3.5")}
       >
         {!compact && (
           <div className="relative shrink-0 self-start mt-0.5">
             <div
-              className="flex h-9 w-9 items-center justify-center rounded-full text-xs font-medium text-white"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium text-white lg:h-9 lg:w-9 lg:text-xs"
               style={{ backgroundColor: avatarColor }}
             >
               {initials}
             </div>
             {count > 1 && (
-              <div className="absolute -bottom-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-foreground-200 px-1 text-[10px] font-semibold leading-none text-background-100">
+              <div className="absolute -bottom-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-foreground-200 px-1 text-[11px] font-semibold leading-none text-background-100 lg:h-[18px] lg:min-w-[18px] lg:text-[10px]">
                 {count}
               </div>
             )}
@@ -491,46 +491,46 @@ export function EmailRow({ thread, compact, onClick, index = 0, accountColors }:
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             {hasUnread && (
-              <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent-100" />
+              <div className="h-2 w-2 shrink-0 rounded-full bg-accent-100 lg:h-1.5 lg:w-1.5" />
             )}
             <span
-              className={cn("truncate text-sm", hasUnread ? "font-semibold text-foreground-100" : "text-foreground-300")}
+              className={cn("truncate text-base lg:text-sm", hasUnread ? "font-semibold text-foreground-100" : "text-foreground-300")}
             >
               {participantLabel}
             </span>
             {compact && count > 1 && (
-              <span className="shrink-0 rounded bg-background-300 px-1 py-px text-[10px] font-medium text-foreground-300">
+              <span className="shrink-0 rounded bg-background-300 px-1.5 py-0.5 text-xs font-medium text-foreground-300 lg:px-1 lg:py-px lg:text-[10px]">
                 {count}
               </span>
             )}
             {showAccountDot && (
               <span
-                className="ml-auto h-2 w-2 shrink-0 rounded-full"
+                className="ml-auto h-2.5 w-2.5 shrink-0 rounded-full lg:h-2 lg:w-2"
                 style={{ backgroundColor: accountColor! }}
                 title={`via ${representative.accountEmail}`}
               />
             )}
-            <span className={cn(showAccountDot ? "ml-1" : "ml-auto", "shrink-0 text-xs text-foreground-300")}>
+            <span className={cn(showAccountDot ? "ml-1" : "ml-auto", "shrink-0 text-sm text-foreground-300 lg:text-xs")}>
               {formatRelative(representative.date)}
             </span>
           </div>
           <div
-            className={cn("mt-0.5 truncate text-sm", hasUnread ? "font-medium text-foreground-200" : "text-foreground-300")}
+            className={cn("mt-0.5 truncate text-base lg:text-sm", hasUnread ? "font-medium text-foreground-200" : "text-foreground-300")}
           >
             {representative.subject || "(no subject)"}
           </div>
           {!compact && (
-            <div className="mt-0.5 truncate text-xs text-foreground-300/70">
+            <div className="mt-0.5 truncate text-sm text-foreground-300/70 lg:text-xs">
               {representative.snippet}
             </div>
           )}
           {!compact && previousReply && (
-            <div className="mt-1.5 flex items-center gap-1.5 rounded-md bg-background-200 px-2 py-1">
+            <div className="mt-1.5 flex items-center gap-1.5 rounded-md bg-background-200 px-2.5 py-1.5 lg:px-2 lg:py-1">
               <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-foreground-300/50">
                 <polyline points="15 10 20 15 15 20" />
                 <path d="M4 4v7a4 4 0 004 4h12" />
               </svg>
-              <span className="truncate text-[11px] text-foreground-300/60">
+              <span className="truncate text-xs text-foreground-300/60 lg:text-[11px]">
                 <span className="font-medium text-foreground-300/80">{prevSenderName}:</span>{" "}
                 {previousReply.snippet}
               </span>

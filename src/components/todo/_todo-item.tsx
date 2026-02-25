@@ -178,7 +178,7 @@ export function TodoItemComponent({
         <button
           type="button"
           onClick={() => isCompleted ? onUncomplete(todo.id) : onComplete(todo.id)}
-          className="-ml-1 flex h-11 w-11 shrink-0 items-center justify-center"
+          className="-ml-1 flex h-12 w-12 shrink-0 items-center justify-center lg:h-11 lg:w-11"
         >
           <TodoCheckbox completed={isCompleted} />
         </button>
@@ -197,7 +197,7 @@ export function TodoItemComponent({
                     type="button"
                     onClick={(e) => { e.stopPropagation(); onOpenWorkspace?.(cat); }}
                     className={cn(
-                      "hidden lg:inline-flex mr-1 shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] font-medium leading-[22px] transition-opacity",
+                      "hidden lg:inline-flex mr-1 shrink-0 items-center rounded px-1.5 py-0.5 text-[11px] font-medium leading-[22px] transition-opacity",
                       color.bg, color.text,
                       onOpenWorkspace && "hover:opacity-80 cursor-pointer",
                     )}
@@ -218,7 +218,7 @@ export function TodoItemComponent({
                   onSearchContacts={searchContacts}
                   onSearchEmails={searchEmails}
                   autoFocus
-                  className="min-w-0 flex-1 text-sm font-medium leading-[22px] text-foreground-100"
+                  className="min-w-0 flex-1 text-base font-medium leading-[24px] text-foreground-100 lg:text-sm lg:leading-[22px]"
                 />
               ) : (
                 <TitleButton
@@ -235,7 +235,7 @@ export function TodoItemComponent({
                     allCategories={availableCategories}
                     entities={todo.entities}
                     className={cn(
-                      "text-sm font-medium leading-[22px]",
+                      "text-base font-medium leading-[24px] lg:text-sm lg:leading-[22px]",
                       isCompleted
                         ? "text-foreground-300 line-through"
                         : "text-foreground-100",
@@ -256,7 +256,7 @@ export function TodoItemComponent({
                     type="button"
                     onClick={(e) => { e.stopPropagation(); onOpenWorkspace?.(cat); }}
                     className={cn(
-                      "inline-flex lg:hidden shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] font-medium leading-[22px] transition-opacity",
+                      "inline-flex lg:hidden shrink-0 items-center rounded px-2 py-0.5 text-xs font-medium leading-[24px] transition-opacity",
                       color.bg, color.text,
                       onOpenWorkspace && "hover:opacity-80 cursor-pointer",
                     )}
@@ -274,9 +274,9 @@ export function TodoItemComponent({
                     const email = todo.sourceEmails[0];
                     onEmailClick?.(email.threadId, email.accountEmail);
                   }}
-                  className="inline-flex items-center gap-1 rounded bg-foreground-100/6 px-1.5 py-0.5 text-[11px] text-foreground-300 transition-colors hover:bg-foreground-100/10 hover:text-foreground-200"
+                  className="inline-flex items-center gap-1 rounded bg-foreground-100/6 px-2 py-1 text-xs text-foreground-300 transition-colors hover:bg-foreground-100/10 hover:text-foreground-200 lg:px-1.5 lg:py-0.5 lg:text-[11px]"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 lg:h-[9px] lg:w-[9px]">
                     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                     <polyline points="22,6 12,13 2,6" />
                   </svg>
@@ -292,9 +292,9 @@ export function TodoItemComponent({
                     e.stopPropagation();
                     onSlackClick?.(todo.sourceSlack);
                   }}
-                  className="inline-flex items-center gap-1 rounded bg-[#4A154B]/8 px-1.5 py-0.5 text-[11px] text-[#4A154B] transition-colors hover:bg-[#4A154B]/15 dark:bg-[#4A154B]/20 dark:text-[#E8B4E9] dark:hover:bg-[#4A154B]/30"
+                  className="inline-flex items-center gap-1 rounded bg-[#4A154B]/8 px-2 py-1 text-xs text-[#4A154B] transition-colors hover:bg-[#4A154B]/15 dark:bg-[#4A154B]/20 dark:text-[#E8B4E9] dark:hover:bg-[#4A154B]/30 lg:px-1.5 lg:py-0.5 lg:text-[11px]"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" className="shrink-0 lg:h-[9px] lg:w-[9px]">
                     <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zm10.124 2.521a2.528 2.528 0 0 1 2.52-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.52V8.834zm-1.271 0a2.528 2.528 0 0 1-2.521 2.521 2.528 2.528 0 0 1-2.521-2.521V2.522A2.528 2.528 0 0 1 15.166 0a2.528 2.528 0 0 1 2.521 2.522v6.312zm-2.521 10.124a2.528 2.528 0 0 1 2.521 2.52A2.528 2.528 0 0 1 15.166 24a2.528 2.528 0 0 1-2.521-2.522v-2.52h2.521zm0-1.271a2.528 2.528 0 0 1-2.521-2.521 2.528 2.528 0 0 1 2.521-2.521h6.312A2.528 2.528 0 0 1 24 15.166a2.528 2.528 0 0 1-2.522 2.521h-6.312z" />
                   </svg>
                   <span className="max-w-[140px] truncate">
@@ -337,10 +337,10 @@ export function TodoItemComponent({
 
           {/* Inline metadata: subtask progress, AI badge, description preview */}
           {(hasSubtasks || (todo.agentSuggested && todo.userResponse === "accepted" && todo.sourceEmails.length === 0 && (!todo.sourceSlack || todo.sourceSlack.length === 0)) || (todo.description && !expanded)) && (
-            <div className="mt-0.5 pb-2 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+            <div className="mt-0.5 pb-2 flex flex-wrap items-center gap-x-2 gap-y-0.5 lg:gap-x-1.5">
               {hasSubtasks && (
-                <span className="inline-flex items-center gap-1 text-[11px] text-foreground-300">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <span className="inline-flex items-center gap-1 text-xs text-foreground-300 lg:text-[11px]">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lg:h-2.5 lg:w-2.5">
                     <polyline points="9 11 12 14 22 4" />
                     <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
                   </svg>
@@ -348,7 +348,7 @@ export function TodoItemComponent({
                 </span>
               )}
               {todo.agentSuggested && todo.userResponse === "accepted" && todo.sourceEmails.length === 0 && (!todo.sourceSlack || todo.sourceSlack.length === 0) && (
-                <span className="inline-flex items-center gap-0.5 rounded-md bg-purple-50 px-1.5 py-0.5 text-[11px] font-medium text-purple-500 dark:bg-purple-950/30 dark:text-purple-400">
+                <span className="inline-flex items-center gap-0.5 rounded-md bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-500 dark:bg-purple-950/30 dark:text-purple-400 lg:px-1.5 lg:text-[11px]">
                   <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 16 16" fill="currentColor">
                     <path d="M8 0L9.5 6.5L16 8L9.5 9.5L8 16L6.5 9.5L0 8L6.5 6.5L8 0Z" />
                   </svg>
@@ -356,7 +356,7 @@ export function TodoItemComponent({
                 </span>
               )}
               {todo.description && !expanded && (
-                <span className="truncate text-[11px] text-foreground-300">
+                <span className="truncate text-xs text-foreground-300 lg:text-[11px]">
                   {todo.description}
                 </span>
               )}
@@ -379,7 +379,7 @@ export function TodoItemComponent({
               {/* Category selector */}
               {availableCategories.length > 0 && !isCompleted && (
                 <div className="mb-2">
-                  <div className="flex flex-wrap items-center gap-1">
+                  <div className="flex flex-wrap items-center gap-1.5 lg:gap-1">
                     {availableCategories.map((cat) => {
                       const color = monoCategories ? getMonoCategoryColor() : getCategoryColor(cat, availableCategories);
                       const isActive = todoCategories.includes(cat);
@@ -389,7 +389,7 @@ export function TodoItemComponent({
                           type="button"
                           onClick={() => toggleCategory(cat)}
                           className={cn(
-                            "rounded px-2 py-0.5 text-[10px] font-medium transition-all",
+                            "rounded px-2.5 py-1 text-xs font-medium transition-all lg:px-2 lg:py-0.5 lg:text-[10px]",
                             isActive
                               ? `${color.bg} ${color.text} ring-1 ring-current/25`
                               : "bg-foreground-100/5 text-foreground-300 hover:bg-foreground-100/10 hover:text-foreground-200",
@@ -541,17 +541,17 @@ function SubtaskRow({
   disabled?: boolean;
 }) {
   return (
-    <div className="group/sub flex items-center gap-0.5 py-0.5">
+    <div className="group/sub flex items-center gap-0.5 py-1 lg:py-0.5">
       <button
         type="button"
         onClick={onToggle}
         disabled={disabled}
-        className="flex h-8 w-8 shrink-0 items-center justify-center"
+        className="flex h-9 w-9 shrink-0 items-center justify-center lg:h-8 lg:w-8"
       >
         <TodoCheckbox completed={subtask.completed} size="sm" disabled={disabled} />
       </button>
       <span className={cn(
-        "flex-1 text-xs",
+        "flex-1 text-sm lg:text-xs",
         subtask.completed ? "text-foreground-300 line-through" : "text-foreground-200",
       )}>
         {subtask.title}
@@ -598,9 +598,9 @@ function AddSubtaskInput({ onAdd }: { onAdd: (title: string) => void }) {
       <button
         type="button"
         onClick={() => setActive(true)}
-        className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-xs text-foreground-300 transition-colors hover:bg-background-200/60 hover:text-foreground-200"
+        className="flex w-full items-center gap-1.5 rounded-md px-2 py-2 text-sm text-foreground-300 transition-colors hover:bg-background-200/60 hover:text-foreground-200 lg:py-1 lg:text-xs"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lg:h-2.5 lg:w-2.5">
           <line x1="12" y1="5" x2="12" y2="19" />
           <line x1="5" y1="12" x2="19" y2="12" />
         </svg>
@@ -610,7 +610,7 @@ function AddSubtaskInput({ onAdd }: { onAdd: (title: string) => void }) {
   }
 
   return (
-    <div className="flex items-center gap-2 py-1">
+    <div className="flex items-center gap-2 py-1.5 lg:py-1">
       <TodoCheckbox size="sm" variant="muted" className="shrink-0" />
       <input
         ref={inputRef}
@@ -622,7 +622,7 @@ function AddSubtaskInput({ onAdd }: { onAdd: (title: string) => void }) {
           if (e.key === "Enter") { e.preventDefault(); submit(); }
           if (e.key === "Escape") { setValue(""); setActive(false); }
         }}
-        className="flex-1 bg-transparent text-xs text-foreground-100 outline-none placeholder:text-foreground-300"
+        className="flex-1 bg-transparent text-sm text-foreground-100 outline-none placeholder:text-foreground-300 lg:text-xs"
         placeholder="Subtask title..."
       />
     </div>
@@ -768,7 +768,7 @@ export function DateQuickPicker({
             "inline-flex items-center font-medium transition-colors",
             isLg
               ? "gap-1.5 rounded-[9px] px-3 py-1.5 text-[14px]"
-              : "gap-1 rounded-md px-1.5 py-0.5 text-[11px]",
+              : "gap-1 rounded-md px-2 py-1 text-xs lg:px-1.5 lg:py-0.5 lg:text-[11px]",
             muted
               ? "bg-foreground-100/5 text-foreground-300 hover:bg-foreground-100/10 hover:text-foreground-200"
               : overdue
@@ -826,7 +826,7 @@ export function DateQuickPicker({
                   type="button"
                   onClick={() => { onSelect(value); setOpen(false); setShowCal(false); }}
                   className={cn(
-                    "flex w-full items-center px-3 py-1.5 text-xs transition-colors hover:bg-background-200",
+                    "flex w-full items-center px-3 py-2.5 text-sm transition-colors hover:bg-background-200 lg:py-1.5 lg:text-xs",
                     currentDate === value ? "font-medium text-blue-600 dark:text-blue-400" : "text-foreground-200",
                   )}
                 >
@@ -845,7 +845,7 @@ export function DateQuickPicker({
                 type="button"
                 onClick={() => setShowCal(!showCal)}
                 className={cn(
-                  "flex w-full items-center gap-1.5 px-3 py-1.5 text-xs transition-colors hover:bg-background-200",
+                  "flex w-full items-center gap-1.5 px-3 py-2.5 text-sm transition-colors hover:bg-background-200 lg:py-1.5 lg:text-xs",
                   showCal ? "font-medium text-blue-600 dark:text-blue-400" : "text-foreground-200",
                 )}
               >
@@ -864,7 +864,7 @@ export function DateQuickPicker({
                   <button
                     type="button"
                     onClick={() => { onSelect(null); setOpen(false); setShowCal(false); }}
-                    className="flex w-full items-center px-3 py-1.5 text-xs text-foreground-300 transition-colors hover:bg-background-200"
+                    className="flex w-full items-center px-3 py-2.5 text-sm text-foreground-300 transition-colors hover:bg-background-200 lg:py-1.5 lg:text-xs"
                   >
                     Remove date
                   </button>
