@@ -256,7 +256,36 @@ export default function HomePage({ userId }: HomePageProps) {
 
   const inboxListRef = useRef<InboxListHandle>(null);
   const compactInboxRef = useRef<CompactInboxHandle>(null);
+  const mainRef = useRef<HTMLElement>(null);
   const { pushUndo } = useUndoRedo();
+
+  // ── Scroll-to-dismiss keyboard (iOS-style) ──
+
+  useEffect(() => {
+    if (isDesktop) return;
+    const main = mainRef.current;
+    if (!main) return;
+    let lastY = 0;
+    const onTouchStart = (e: TouchEvent) => {
+      lastY = e.touches[0].clientY;
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      const dy = e.touches[0].clientY - lastY;
+      if (Math.abs(dy) > 10 && document.activeElement instanceof HTMLElement) {
+        const tag = document.activeElement.tagName;
+        const isEditable = document.activeElement.isContentEditable;
+        if (tag === "INPUT" || tag === "TEXTAREA" || isEditable) {
+          document.activeElement.blur();
+        }
+      }
+    };
+    main.addEventListener("touchstart", onTouchStart, { passive: true });
+    main.addEventListener("touchmove", onTouchMove, { passive: true });
+    return () => {
+      main.removeEventListener("touchstart", onTouchStart);
+      main.removeEventListener("touchmove", onTouchMove);
+    };
+  }, [isDesktop]);
 
   // ── Escape key ──
 
@@ -592,7 +621,7 @@ export default function HomePage({ userId }: HomePageProps) {
       />
 
       <div className="flex min-h-0 flex-1">
-        <main className="min-h-0 flex-1 overflow-y-auto">
+        <main ref={mainRef} className="min-h-0 flex-1 overflow-y-auto">
           <div className={cn("pt-0", isDesktop ? "flex px-4" : "mx-auto max-w-2xl px-2")}>
 
             {/* Desktop left sidebar: compact inbox + conversation list */}
