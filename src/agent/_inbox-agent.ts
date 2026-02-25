@@ -208,7 +208,8 @@ interface AgentEnv {
   INBOX_AGENT: DurableObjectNamespace;
   INBOX_DOG_CLIENT_ID: string;
   INBOX_DOG_CLIENT_SECRET: string;
-  LOADER: WorkerLoader;
+  /** Re-enable in wrangler.json: "worker_loaders": [{ "binding": "LOADER" }] */
+  LOADER?: WorkerLoader;
 }
 
 const STORAGE_KEY_PROMPT_CONFIG = "memory:prompt_config";
@@ -1598,7 +1599,7 @@ export class InboxAgent extends AIChatAgent<AgentEnv> {
         }
       }
 
-      if (validatedTokens.length > 0) {
+      if (validatedTokens.length > 0 && this.env.LOADER) {
         const { tools: gmailTools, resetCallCounter } = createGmailTools(validatedTokens);
         const executor = new DynamicWorkerExecutor({ loader: this.env.LOADER });
         const codemodeInner = createCodeTool({ tools: gmailTools, executor });
@@ -1676,6 +1677,7 @@ export class InboxAgent extends AIChatAgent<AgentEnv> {
           void logMemoryEvent(this.ctx.storage, "chat_error", `Gmail API returned ${testRes.status} during token validation`).catch(() => {});
           throw new Error(`Gmail API returned ${testRes.status} during token validation`);
         }
+        if (this.env.LOADER) {
         const { tools: gmailTools, resetCallCounter } = createGmailTools(activeToken);
         const executor = new DynamicWorkerExecutor({ loader: this.env.LOADER });
         const codemodeInner = createCodeTool({ tools: gmailTools, executor });
@@ -1714,6 +1716,7 @@ export class InboxAgent extends AIChatAgent<AgentEnv> {
             return safeRes;
           },
         });
+        }
         allValidatedTokens.push({ email: session.email, token: activeToken });
         accountInfoForPrompt.push({ email: session.email });
       } else {

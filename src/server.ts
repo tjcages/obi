@@ -23,7 +23,8 @@ interface Env {
   SCHEDULED_SENDER: DurableObjectNamespace;
   ASSETS: Fetcher;
   INBOX_DOG: Fetcher;
-  LOADER: WorkerLoader;
+  /** Re-enable in wrangler.json: "worker_loaders": [{ "binding": "LOADER" }] */
+  LOADER?: WorkerLoader;
   WORKSPACE_FILES: R2Bucket;
   INBOX_DOG_CLIENT_ID: string;
   INBOX_DOG_CLIENT_SECRET: string;
@@ -90,6 +91,9 @@ export default {
           token = refreshed.access_token;
         }
 
+        if (!env.LOADER) {
+          return Response.json({ error: "Codemode is temporarily disabled (worker_loaders beta pending)" }, { status: 503 });
+        }
         const { tools: gmailTools } = createGmailTools(token);
         const { DynamicWorkerExecutor } = await import("@cloudflare/codemode");
         const { createCodeTool } = await import("@cloudflare/codemode/ai");
