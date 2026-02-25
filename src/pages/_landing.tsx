@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import {
   Envelope,
   ChatCircleDots,
@@ -31,6 +32,9 @@ function GoogleIcon() {
     </svg>
   );
 }
+
+/** Server config error we don't show to users — we show the login UI instead */
+const CONFIG_ERROR_PATTERN = "INBOX_DOG_CLIENT_ID not set";
 
 const ERROR_MAP: Record<string, string> = {
   "OAuthState not found": "Your sign-in link expired. Please try again.",
@@ -115,8 +119,27 @@ export default function Landing({
   error: string | null;
 }) {
   const rawError = error ?? authUrlError;
-  const displayError = rawError ? friendlyError(rawError) : null;
+  const isConfigError = rawError?.includes(CONFIG_ERROR_PATTERN) ?? false;
+  const displayError = rawError && !isConfigError ? friendlyError(rawError) : null;
   const [mounted, setMounted] = useState(false);
+
+  async function handleConnectClick() {
+    if (authUrl) {
+      window.location.href = authUrl;
+      return;
+    }
+    try {
+      const res = await fetch("/api/auth-url");
+      const data = (await res.json()) as { authUrl?: string; error?: string };
+      if (data.authUrl) {
+        window.location.href = data.authUrl;
+      } else {
+        toast.error(data.error ?? "Sign-in is not configured for this deployment.");
+      }
+    } catch {
+      toast.error("Failed to load sign-in. Please try again.");
+    }
+  }
 
   useEffect(() => {
     requestAnimationFrame(() => setMounted(true));
@@ -206,20 +229,14 @@ export default function Landing({
               </div>
             )}
 
-            {authUrl ? (
-              <button
-                type="button"
-                className="inline-flex items-center gap-2.5 rounded-full bg-accent-100 px-7 py-3.5 text-[15px] font-medium text-white transition-all hover:-translate-y-0.5 hover:bg-accent-100/90 hover:shadow-lg hover:shadow-accent-100/20 active:translate-y-0"
-                onClick={() => { window.location.href = authUrl; }}
-              >
-                <GoogleIcon />
-                Connect with Google
-              </button>
-            ) : (
-              !rawError && (
-                <span className="text-sm text-foreground-300">Connecting...</span>
-              )
-            )}
+            <button
+              type="button"
+              className="inline-flex items-center gap-2.5 rounded-full bg-accent-100 px-7 py-3.5 text-[15px] font-medium text-white transition-all hover:-translate-y-0.5 hover:bg-accent-100/90 hover:shadow-lg hover:shadow-accent-100/20 active:translate-y-0"
+              onClick={handleConnectClick}
+            >
+              <GoogleIcon />
+              Connect with Google
+            </button>
           </div>
         </section>
 
@@ -346,19 +363,17 @@ export default function Landing({
           </div>
 
           {/* Secondary CTA */}
-          {authUrl && (
-            <div className="mt-10 text-center">
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 rounded-full border border-border-100 bg-background-200 px-6 py-3 text-sm font-medium text-foreground-200 transition-all hover:-translate-y-0.5 hover:border-accent-100/40 hover:text-foreground-100"
-                onClick={() => { window.location.href = authUrl; }}
-              >
-                <GoogleIcon />
-                Get started — it's free
-                <ArrowRight weight="bold" className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          )}
+          <div className="mt-10 text-center">
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-full border border-border-100 bg-background-200 px-6 py-3 text-sm font-medium text-foreground-200 transition-all hover:-translate-y-0.5 hover:border-accent-100/40 hover:text-foreground-100"
+              onClick={handleConnectClick}
+            >
+              <GoogleIcon />
+              Get started — it's free
+              <ArrowRight weight="bold" className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </section>
 
         {/* Built with */}
