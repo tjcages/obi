@@ -22,7 +22,6 @@ interface Env {
   INBOX_AGENT: DurableObjectNamespace;
   SCHEDULED_SENDER: DurableObjectNamespace;
   ASSETS: Fetcher;
-  INBOX_DOG: Fetcher;
   /** Re-enable in wrangler.json: "worker_loaders": [{ "binding": "LOADER" }] */
   LOADER?: WorkerLoader;
   WORKSPACE_FILES: R2Bucket;
