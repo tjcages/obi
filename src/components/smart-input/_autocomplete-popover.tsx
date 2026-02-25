@@ -77,7 +77,7 @@ export const AutocompletePopover = forwardRef<
 
         return (
           <div key={group.type}>
-            <div className="sticky top-0 border-b border-border-100 bg-background-200/80 px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-foreground-300 backdrop-blur-sm">
+            <div className="sticky top-0 border-b border-border-100 bg-background-200/80 px-3 py-2 text-xs font-medium uppercase tracking-wider text-foreground-300 backdrop-blur-sm lg:py-1.5 lg:text-[10px]">
               {group.type === "people" && "People"}
               {group.type === "emails" && "Emails"}
               {group.type === "categories" && "Categories"}
@@ -93,7 +93,7 @@ export const AutocompletePopover = forwardRef<
                     key={contact.email}
                     type="button"
                     className={cn(
-                      "flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors",
+                      "flex w-full items-center gap-2.5 px-3 py-3 text-left text-base transition-colors lg:gap-2 lg:py-2 lg:text-sm",
                       isSelected
                         ? "bg-accent-100/10 text-foreground-100"
                         : "text-foreground-200 hover:bg-background-200",
@@ -102,13 +102,13 @@ export const AutocompletePopover = forwardRef<
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => onSelect(contact)}
                   >
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-100/15 text-[10px] font-medium text-accent-100">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-100/15 text-xs font-medium text-accent-100 lg:h-6 lg:w-6 lg:text-[10px]">
                       {(contact.name?.[0] ?? contact.email[0]).toUpperCase()}
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="truncate font-medium">{contact.name || contact.email}</div>
                       {contact.name && (
-                        <div className="truncate text-xs text-foreground-300">{contact.email}</div>
+                        <div className="truncate text-sm text-foreground-300 lg:text-xs">{contact.email}</div>
                       )}
                     </div>
                   </button>
@@ -122,7 +122,7 @@ export const AutocompletePopover = forwardRef<
                     key={email.id}
                     type="button"
                     className={cn(
-                      "flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors",
+                      "flex w-full items-center gap-2.5 px-3 py-3 text-left text-base transition-colors lg:gap-2 lg:py-2 lg:text-sm",
                       isSelected
                         ? "bg-accent-100/10 text-foreground-100"
                         : "text-foreground-200 hover:bg-background-200",
@@ -131,7 +131,7 @@ export const AutocompletePopover = forwardRef<
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => onSelect(email)}
                   >
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-xs text-blue-500">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-sm text-blue-500 lg:h-6 lg:w-6 lg:text-xs">
                       <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="2" y="4" width="20" height="16" rx="2" />
                         <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
@@ -139,7 +139,7 @@ export const AutocompletePopover = forwardRef<
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="truncate font-medium">{email.subject || "(no subject)"}</div>
-                      <div className="truncate text-xs text-foreground-300">{email.from}</div>
+                      <div className="truncate text-sm text-foreground-300 lg:text-xs">{email.from}</div>
                     </div>
                   </button>
                 );
@@ -153,7 +153,7 @@ export const AutocompletePopover = forwardRef<
                     key={cat}
                     type="button"
                     className={cn(
-                      "flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors",
+                      "flex w-full items-center gap-2.5 px-3 py-3 text-left text-base transition-colors lg:gap-2 lg:py-2 lg:text-sm",
                       isSelected
                         ? "bg-accent-100/10 text-foreground-100"
                         : "text-foreground-200 hover:bg-background-200",
@@ -164,7 +164,7 @@ export const AutocompletePopover = forwardRef<
                   >
                     <span
                       className={cn(
-                        "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs",
+                        "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm lg:h-6 lg:w-6 lg:text-xs",
                         color.style ? "" : `${color.bg} ${color.text}`,
                       )}
                       style={color.style ? { backgroundColor: `${color.hex}20`, color: color.hex } : undefined}

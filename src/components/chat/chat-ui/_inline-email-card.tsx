@@ -42,9 +42,9 @@ export function InlineEmailCard({ from, subject, snippet, date, unread }: Inline
   const avatarColor = AVATAR_COLORS[hashString(from) % AVATAR_COLORS.length];
 
   return (
-    <div className="flex items-start gap-2.5 rounded-lg px-3 py-2.5 transition-colors hover:bg-white/5 dark:hover:bg-white/3">
+    <div className="flex items-start gap-2.5 rounded-lg px-3 py-3 transition-colors hover:bg-white/5 dark:hover:bg-white/3 lg:py-2.5">
       <div
-        className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white"
+        className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white lg:h-8 lg:w-8 lg:text-[11px]"
         style={{ backgroundColor: avatarColor }}
       >
         {sender.initials}
@@ -52,19 +52,19 @@ export function InlineEmailCard({ from, subject, snippet, date, unread }: Inline
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           {unread && (
-            <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent-100" />
+            <div className="h-2 w-2 shrink-0 rounded-full bg-accent-100 lg:h-1.5 lg:w-1.5" />
           )}
-          <span className={cn("truncate text-[13px]", unread ? "font-semibold text-foreground-100" : "text-foreground-200")}>
+          <span className={cn("truncate text-sm lg:text-[13px]", unread ? "font-semibold text-foreground-100" : "text-foreground-200")}>
             {sender.name}
           </span>
-          <span className="ml-auto shrink-0 text-[11px] text-foreground-300">
+          <span className="ml-auto shrink-0 text-xs text-foreground-300 lg:text-[11px]">
             {formatRelative(date)}
           </span>
         </div>
-        <div className={cn("mt-0.5 truncate text-[13px]", unread ? "font-medium text-foreground-100" : "text-foreground-200")}>
+        <div className={cn("mt-0.5 truncate text-sm lg:text-[13px]", unread ? "font-medium text-foreground-100" : "text-foreground-200")}>
           {subject || "(no subject)"}
         </div>
-        <div className="mt-0.5 truncate text-[12px] text-foreground-300/70">
+        <div className="mt-0.5 truncate text-[13px] text-foreground-300/70 lg:text-[12px]">
           {snippet}
         </div>
       </div>

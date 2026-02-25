@@ -57,22 +57,22 @@ export function InlineEmailPreview({
     <div className="overflow-hidden rounded-xl border border-border-100/60 bg-background-100/80 backdrop-blur-sm">
       {/* Header */}
       <div className="border-b border-border-100/40 px-4 py-3">
-        <div className="text-[14px] font-semibold text-foreground-100">
+        <div className="text-base font-semibold text-foreground-100 lg:text-[14px]">
           {subject || "(no subject)"}
         </div>
         <div className="mt-2 flex items-center gap-2.5">
           <div
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white lg:h-8 lg:w-8 lg:text-[11px]"
             style={{ backgroundColor: avatarColor }}
           >
             {sender.initials}
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline gap-1.5">
-              <span className="text-[13px] font-medium text-foreground-100">{sender.name}</span>
-              <span className="truncate text-[11px] text-foreground-300">&lt;{sender.email}&gt;</span>
+              <span className="text-sm font-medium text-foreground-100 lg:text-[13px]">{sender.name}</span>
+              <span className="truncate text-xs text-foreground-300 lg:text-[11px]">&lt;{sender.email}&gt;</span>
             </div>
-            <div className="flex items-center gap-1.5 text-[11px] text-foreground-300">
+            <div className="flex items-center gap-1.5 text-xs text-foreground-300 lg:text-[11px]">
               {to && (
                 <>
                   <span>to {to.split(",")[0].trim()}{to.includes(",") ? ` +${to.split(",").length - 1}` : ""}</span>
@@ -92,7 +92,7 @@ export function InlineEmailPreview({
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0 text-accent-100/60">
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
             </svg>
-            <p className="text-[13px] leading-relaxed text-foreground-200 italic">
+            <p className="text-sm leading-relaxed text-foreground-200 italic lg:text-[13px]">
               {highlight}
             </p>
           </div>
@@ -106,7 +106,7 @@ export function InlineEmailPreview({
             <EmailContentRenderer bodyHtml="" bodyText={bodyText!} />
           </div>
         ) : (
-          <p className="text-[13px] leading-relaxed text-foreground-200">
+          <p className="text-sm leading-relaxed text-foreground-200 lg:text-[13px]">
             {snippet}
           </p>
         )}
@@ -118,7 +118,7 @@ export function InlineEmailPreview({
           <button
             type="button"
             onClick={() => setExpanded(!expanded)}
-            className="text-[12px] font-medium text-accent-100/80 transition-colors hover:text-accent-100"
+            className="text-sm font-medium text-accent-100/80 transition-colors hover:text-accent-100 lg:text-[12px]"
           >
             {expanded ? "Show less" : "Show full email"}
           </button>

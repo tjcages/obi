@@ -11,8 +11,8 @@ export function InlineEmailList({ title, emails }: InlineEmailListProps) {
   return (
     <div className="overflow-hidden rounded-xl border border-border-100/60 bg-background-100/80 backdrop-blur-sm">
       {title && (
-        <div className="border-b border-border-100/40 px-4 py-2">
-          <span className="text-[12px] font-semibold uppercase tracking-wide text-foreground-300">
+        <div className="border-b border-border-100/40 px-4 py-2.5 lg:py-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-foreground-300 lg:text-[12px]">
             {title}
           </span>
         </div>
@@ -23,8 +23,8 @@ export function InlineEmailList({ title, emails }: InlineEmailListProps) {
         ))}
       </div>
       {emails.length > 0 && (
-        <div className="border-t border-border-100/40 px-4 py-1.5 text-center">
-          <span className="text-[11px] text-foreground-300/60">
+        <div className="border-t border-border-100/40 px-4 py-2 text-center lg:py-1.5">
+          <span className="text-xs text-foreground-300/60 lg:text-[11px]">
             {emails.length} email{emails.length !== 1 ? "s" : ""}
           </span>
         </div>

@@ -307,8 +307,8 @@ export function TodoPanel({
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               </div>
-              <div className="text-sm font-medium text-foreground-200">Inbox is clear</div>
-              <p className="mt-0.5 text-xs text-foreground-300/70">
+              <div className="text-base font-medium text-foreground-200 lg:text-sm">Inbox is clear</div>
+              <p className="mt-0.5 text-sm text-foreground-300/70 lg:text-xs">
                 Scanned {lastScanResult.emailsScanned} email{lastScanResult.emailsScanned !== 1 ? "s" : ""} — nothing needs your attention right now
               </p>
             </div>
@@ -375,7 +375,7 @@ export function TodoPanel({
               />
             </div>
             {categories.length > 0 && (
-              <div className="mt-1.5 flex items-center gap-1 pl-[26px]">
+              <div className="mt-1.5 flex items-center gap-1.5 pl-[26px] lg:gap-1">
                 {categories.map((cat) => {
                   const color = getCategoryColor(cat, categories);
                   const isSelected = newTodoCategories.includes(cat);
@@ -391,7 +391,7 @@ export function TodoPanel({
                         )
                       }
                       className={cn(
-                        "rounded px-2 py-0.5 text-[10px] font-medium transition-all",
+                        "rounded px-2.5 py-1 text-xs font-medium transition-all lg:px-2 lg:py-0.5 lg:text-[10px]",
                         isSelected
                           ? `${color.bg} ${color.text} ring-1 ring-current/25`
                           : "bg-foreground-100/5 text-foreground-300 hover:bg-foreground-100/10 hover:text-foreground-200",
@@ -425,13 +425,13 @@ export function TodoPanel({
               setNewTodoCategories(lastUsedCategory ? [lastUsedCategory] : []);
               setAddingTodo(true);
             }}
-            className="mt-1.5 flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-foreground-300/60 transition-colors hover:bg-foreground-100/5 hover:text-foreground-300"
+            className="mt-1.5 flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-foreground-300/60 transition-colors hover:bg-foreground-100/5 hover:text-foreground-300 lg:py-1.5"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lg:h-3.5 lg:w-3.5">
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
-            <span className="text-xs">Add a to-do</span>
+            <span className="text-sm lg:text-xs">Add a to-do</span>
           </button>
         )}
       </div>
@@ -444,10 +444,10 @@ export function TodoPanel({
             onClick={() => setShowUpcoming(!showUpcoming)}
             className="mb-2 flex w-full items-center gap-1.5 px-1"
           >
-            <span className="text-xs font-medium uppercase tracking-widest text-foreground-300">
+            <span className="text-sm font-medium uppercase tracking-widest text-foreground-300 lg:text-xs">
               Upcoming
             </span>
-            <span className="text-[10px] text-foreground-300/70">
+            <span className="text-xs text-foreground-300/70 lg:text-[10px]">
               ({upcoming.length})
             </span>
             <svg
@@ -546,10 +546,10 @@ export function TodoPanel({
             onClick={() => setShowCompleted(!showCompleted)}
             className="mb-2 flex w-full items-center gap-1.5 px-1"
           >
-            <span className="text-xs font-medium uppercase tracking-widest text-foreground-300">
+            <span className="text-sm font-medium uppercase tracking-widest text-foreground-300 lg:text-xs">
               Completed
             </span>
-            <span className="text-[10px] text-foreground-300/70">
+            <span className="text-xs text-foreground-300/70 lg:text-[10px]">
               ({completed.length})
             </span>
             <svg
@@ -676,14 +676,14 @@ function CategoryBar({
             setAdding(false);
           }}
           placeholder={categories.length > 0 ? "New category..." : "e.g. Work, Personal..."}
-          className="w-32 rounded border border-border-100 bg-background-100 px-2 py-0.5 text-[11px] text-foreground-100 outline-none placeholder:text-foreground-300/50 focus:border-accent-100/50"
+          className="w-32 rounded border border-border-100 bg-background-100 px-2.5 py-1 text-sm text-foreground-100 outline-none placeholder:text-foreground-300/50 focus:border-accent-100/50 lg:px-2 lg:py-0.5 lg:text-[11px]"
         />
       ) : (
         <button
           type="button"
           onClick={() => setAdding(true)}
           className={cn(
-            "inline-flex shrink-0 whitespace-nowrap items-center gap-1 rounded border border-dashed px-2 py-0.5 text-[11px] transition-colors",
+            "inline-flex shrink-0 whitespace-nowrap items-center gap-1 rounded border border-dashed px-2.5 py-1 text-sm transition-colors lg:px-2 lg:py-0.5 lg:text-[11px]",
             categories.length === 0
               ? "border-foreground-300/30 text-foreground-300 hover:border-foreground-300/50 hover:text-foreground-200"
               : "border-border-100 text-foreground-300/50 hover:border-foreground-300/40 hover:text-foreground-300",
@@ -774,11 +774,11 @@ function SectionHeader({ label, count, icon, scanning, onRefresh, refreshing }: 
   return (
     <div className="group/section mb-2 flex items-center gap-1.5 px-1">
       {icon}
-      <span className="text-xs font-medium uppercase tracking-widest text-foreground-300">
+      <span className="text-sm font-medium uppercase tracking-widest text-foreground-300 lg:text-xs">
         {label}
       </span>
       {count > 0 && (
-        <span className="text-[10px] text-foreground-300/70">
+        <span className="text-xs text-foreground-300/70 lg:text-[10px]">
           ({count})
         </span>
       )}
@@ -886,7 +886,7 @@ export function TodoToggleButton({ onClick, count }: { onClick: () => void; coun
         <polyline points="22 4 12 14.01 9 11.01" />
       </svg>
       {count !== undefined && count > 0 && (
-        <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-blue-500 px-1 text-[9px] font-bold text-white">
+        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-500 px-1 text-[11px] font-bold text-white lg:h-3.5 lg:min-w-3.5 lg:text-[9px]">
           {count > 9 ? "9+" : count}
         </span>
       )}

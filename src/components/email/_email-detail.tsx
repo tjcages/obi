@@ -171,12 +171,12 @@ export function EmailDetail({ messageId, onBack, onChatAbout }: EmailDetailProps
             <path d="M12 19l-7-7 7-7"/>
           </svg>
         </button>
-        <span className="text-sm text-foreground-300">Back</span>
+        <span className="text-base text-foreground-300 lg:text-sm">Back</span>
         <div className="flex-1" />
         <button
           type="button"
           onClick={() => onChatAbout({ from: email.from, subject: email.subject, snippet: email.snippet })}
-          className="rounded-lg bg-accent-100 px-3.5 py-1.5 text-sm font-medium text-white transition-colors hover:bg-accent-100/90"
+          className="rounded-lg bg-accent-100 px-4 py-2 text-base font-medium text-white transition-colors hover:bg-accent-100/90 lg:px-3.5 lg:py-1.5 lg:text-sm"
         >
           Chat about this
         </button>
@@ -210,13 +210,13 @@ export function EmailDetail({ messageId, onBack, onChatAbout }: EmailDetailProps
                     href={company.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex shrink-0 items-center rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-500 no-underline transition-colors hover:bg-blue-100 hover:text-blue-700 dark:bg-blue-950/40 dark:text-blue-400 dark:hover:bg-blue-900/50 dark:hover:text-blue-300"
+                    className="inline-flex shrink-0 items-center rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-500 no-underline transition-colors hover:bg-blue-100 hover:text-blue-700 dark:bg-blue-950/40 dark:text-blue-400 dark:hover:bg-blue-900/50 dark:hover:text-blue-300 lg:px-2 lg:py-0.5 lg:text-[11px]"
                   >
                     {company.name}
                   </a>
                 )}
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-foreground-300">
+              <div className="flex items-center gap-1.5 text-sm text-foreground-300 lg:text-xs">
                 <span>to {parseSender(email.to.split(",")[0].trim()).name}{email.to.includes(",") ? " +" + (email.to.split(",").length - 1) : ""}</span>
                 <span>&middot;</span>
                 <span>{formatRelative(email.date)}</span>

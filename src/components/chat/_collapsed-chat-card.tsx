@@ -18,11 +18,11 @@ export function CollapsedChatCard({
         onClick={onTap}
         className="flex min-w-0 flex-1 flex-col p-4 text-left"
       >
-        <span className="truncate text-sm font-medium text-foreground-100">
+        <span className="truncate text-base font-medium text-foreground-100 lg:text-sm">
           {title}
         </span>
         {snippet && (
-          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-foreground-300">
+          <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-foreground-300 lg:text-xs">
             {snippet}
           </p>
         )}

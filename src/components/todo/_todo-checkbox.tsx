@@ -7,8 +7,8 @@ import { cn } from "../../lib";
 export const todoCheckboxShape = "rounded-md";
 
 const sizeClasses = {
-  default: "h-[18px] w-[18px]",
-  sm: "h-3.5 w-3.5",
+  default: "h-5 w-5 lg:h-[18px] lg:w-[18px]",
+  sm: "h-4 w-4 lg:h-3.5 lg:w-3.5",
 } as const;
 
 const variantClasses = {
@@ -19,8 +19,8 @@ const variantClasses = {
 } as const;
 
 const checkIconSizes = {
-  default: "h-[10px] w-[10px]",
-  sm: "h-2 w-2",
+  default: "h-3 w-3 lg:h-[10px] lg:w-[10px]",
+  sm: "h-2.5 w-2.5 lg:h-2 lg:w-2",
 } as const;
 
 export interface TodoCheckboxProps {

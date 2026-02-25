@@ -259,7 +259,7 @@ export function UnifiedInput({
                     setInputValue("");
                     setInputEntities([]);
                   }}
-                  className="shrink-0 rounded-full bg-accent-100/8 px-2.5 py-0.5 text-[11px] font-medium text-accent-100 transition-all hover:bg-accent-100/15"
+                  className="shrink-0 rounded-full bg-accent-100/8 px-3 py-1 text-xs font-medium text-accent-100 transition-all hover:bg-accent-100/15 lg:px-2.5 lg:py-0.5 lg:text-[11px]"
                 >
                   {s}
                 </button>
@@ -326,7 +326,7 @@ function ModeToggle({
           "flex items-center gap-1.5 font-medium transition-all",
           isLg
             ? "rounded-[9px] px-3.5 py-1.5 text-[14px]"
-            : "rounded-md px-2.5 py-1 text-[12px]",
+            : "rounded-md px-3 py-1.5 text-sm lg:px-2.5 lg:py-1 lg:text-[12px]",
           mode === "todo"
             ? "bg-background-300 text-foreground-100 shadow-sm"
             : "text-foreground-300 hover:text-foreground-200",
@@ -347,7 +347,7 @@ function ModeToggle({
           "flex items-center gap-1.5 font-medium transition-all",
           isLg
             ? "rounded-[9px] px-3.5 py-1.5 text-[14px]"
-            : "rounded-md px-2.5 py-1 text-[12px]",
+            : "rounded-md px-3 py-1.5 text-sm lg:px-2.5 lg:py-1 lg:text-[12px]",
           mode === "chat"
             ? "bg-accent-100/10 text-accent-100"
             : "text-foreground-300 hover:text-foreground-200",
@@ -416,7 +416,7 @@ function CategoryPills({
               )
             }
             className={cn(
-              "shrink-0 rounded px-2 py-0.5 text-[11px] font-medium transition-all",
+              "shrink-0 rounded px-2.5 py-1 text-xs font-medium transition-all lg:px-2 lg:py-0.5 lg:text-[11px]",
               isSelected
                 ? `${color.bg} ${color.text} ring-1 ring-current/25`
                 : "bg-foreground-100/5 text-foreground-300 hover:bg-foreground-100/10 hover:text-foreground-200",
@@ -455,14 +455,14 @@ function CategoryPills({
             setAddingCategory(false);
           }}
           placeholder="Category name…"
-          className="w-24 rounded border border-border-100 bg-background-100 px-2 py-0.5 text-[11px] text-foreground-100 outline-none placeholder:text-foreground-300/50 focus:border-accent-100/50"
+          className="w-28 rounded border border-border-100 bg-background-100 px-2.5 py-1 text-sm text-foreground-100 outline-none placeholder:text-foreground-300/50 focus:border-accent-100/50 lg:w-24 lg:px-2 lg:py-0.5 lg:text-[11px]"
         />
       ) : onSaveCategories ? (
         <button
           type="button"
           tabIndex={tabIndex}
           onClick={() => setAddingCategory(true)}
-          className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded bg-foreground-100/5 text-foreground-300/60 transition-colors hover:bg-foreground-100/10 hover:text-foreground-200"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-foreground-100/5 text-foreground-300/60 transition-colors hover:bg-foreground-100/10 hover:text-foreground-200 lg:h-[22px] lg:w-[22px]"
           title="Add category"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
