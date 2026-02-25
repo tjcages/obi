@@ -109,6 +109,10 @@ export function SmartInput({
           !multiline && "smart-input-single-line",
         ),
         "enterkeyhint": multiline ? "enter" : "send",
+        "inputmode": "text",
+        "autocomplete": "off",
+        "autocorrect": "on",
+        "autocapitalize": "sentences",
       },
       handleKeyDown: (_view, event) => {
         if (showAutocomplete && popoverRef.current) {
