@@ -778,16 +778,19 @@ export default function HomePage({ userId }: HomePageProps) {
                 />
               )}
 
-              <UnifiedInput
-                suggestions={suggestions}
-                categories={todoState.preferences.todoCategories ?? []}
-                lastUsedCategory={todoState.lastUsedCategory}
-                onStartConversation={handleStartConversation}
-                onCreateTodo={(params) => void todoState.createTodo({ ...params, scheduledDate: params.scheduledDate ?? selectedCalDate ?? undefined })}
-                onSaveCategories={todoState.saveCategories}
-                todoPanelOpen={todoPanelOpen}
-                onOpenTodoPanel={() => setTodoPanelOpen(true)}
-              />
+              {/* Desktop inline input — mobile uses floating bottom sheet */}
+              {isDesktop && (
+                <UnifiedInput
+                  suggestions={suggestions}
+                  categories={todoState.preferences.todoCategories ?? []}
+                  lastUsedCategory={todoState.lastUsedCategory}
+                  onStartConversation={handleStartConversation}
+                  onCreateTodo={(params) => void todoState.createTodo({ ...params, scheduledDate: params.scheduledDate ?? selectedCalDate ?? undefined })}
+                  onSaveCategories={todoState.saveCategories}
+                  todoPanelOpen={todoPanelOpen}
+                  onOpenTodoPanel={() => setTodoPanelOpen(true)}
+                />
+              )}
 
               {/* Todos */}
               <AnimatePresence>
@@ -835,7 +838,7 @@ export default function HomePage({ userId }: HomePageProps) {
               </AnimatePresence>
 
               {/* Inbox */}
-              <div className={cn(isDesktop ? "pt-6 pb-16" : "pt-4 pb-16")}>
+              <div className={cn(isDesktop ? "pt-6 pb-16" : "pt-4 pb-28")}>
                 <div className="mb-3 flex items-center justify-between px-1">
                   <h2 className="text-xs font-medium uppercase tracking-widest text-foreground-300">
                     Inbox
@@ -1020,9 +1023,19 @@ export default function HomePage({ userId }: HomePageProps) {
         </Drawer>
       )}
 
-      {/* Mobile bottom fade — smooths content clipping at viewport edge */}
-      {!isDesktop && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 h-8 bg-gradient-to-t from-background-100 to-transparent" />
+      {/* Mobile floating bottom sheet input */}
+      {!isDesktop && !activeCategoryWorkspace && (
+        <UnifiedInput
+          suggestions={suggestions}
+          categories={todoState.preferences.todoCategories ?? []}
+          lastUsedCategory={todoState.lastUsedCategory}
+          onStartConversation={handleStartConversation}
+          onCreateTodo={(params) => void todoState.createTodo({ ...params, scheduledDate: params.scheduledDate ?? selectedCalDate ?? undefined })}
+          onSaveCategories={todoState.saveCategories}
+          todoPanelOpen={todoPanelOpen}
+          onOpenTodoPanel={() => setTodoPanelOpen(true)}
+          floating
+        />
       )}
     </div>
   );
