@@ -1,0 +1,85 @@
+---
+description: How to add, modify, or check feature flags in this project
+globs: flags.config.ts, src/lib/feature-flags.ts, src/middleware.ts, .env, src/pages/api/admin/flags.ts
+alwaysApply: false
+---
+
+# Feature Flags
+
+This project uses a **registry-driven** feature flag system. Flag definitions live in `flags.config.ts` at the **repo root** — right next to `.env`.
+
+## Adding a New Feature Flag
+
+**One step.** Append an entry to the `FLAGS` array in `flags.config.ts`:
+
+```typescript
+// flags.config.ts — inside the FLAGS array
+{
+  key: "my_feature",
+  label: "My Feature",
+  description: "What this flag controls, shown in the admin UI.",
+  route: "/my-route",                    // optional: gate this route prefix
+  redirectTo: "/",                        // optional: where to send users when disabled (default: "/")
+  prodRouteOnly: true,                    // optional: only gate routes in production (default: false)
+  devDefault: true,                       // optional: default in dev (default: true)
+  prodDefault: false,                     // optional: default in prod (default: false)
+},
+```
+
+**That's it.** No other files need editing. The following are automatic:
+
+- **Middleware** iterates `FLAGS` at runtime — new route gates work immediately
+- **Admin UI** (Settings → Feature Flags tab) reads from the API which returns the full registry
+- **Env var** `FEATURE_MY_FEATURE=true|false` works in `.env` or `wrangler.jsonc` vars
+- **D1 persistence** via the admin toggle (writes to `feature_flags` table)
+- **Type safety** via the `Env` interface's `[key: \`FEATURE_\${string}\`]` index signature
+
+## Flag Resolution Priority
+
+When reading a flag, the system checks in this order (first match wins):
+
+1. **D1** `feature_flags` table (set via admin UI toggle)
+2. **Environment variable** `FEATURE_<KEY>` (set in `.env` or `wrangler.jsonc`)
+3. **Defaults** — `devDefault` in development, `prodDefault` in production
+
+## Env Var Convention
+
+Flag env vars follow the pattern `FEATURE_<KEY_IN_UPPERCASE>`:
+
+```bash
+# .env
+FEATURE_ADMIN_PANEL=true
+FEATURE_BLOG=false
+FEATURE_MY_FEATURE=true
+```
+
+## Reading a Flag in Code
+
+```typescript
+import { getFeatureFlag } from "@/lib/feature-flags"
+
+// In an Astro page/API route:
+const enabled = await getFeatureFlag("my_feature", Astro.locals.runtime?.env)
+
+// In middleware (env already available):
+const enabled = await getFeatureFlag("my_feature", env)
+```
+
+## Flag Types
+
+### Route-gated flags
+Include `route` and optionally `redirectTo`. Middleware handles the redirect automatically.
+
+### Logic-only flags
+Omit `route`. Use `getFeatureFlag()` in component/page code to conditionally render or behave differently. No middleware involvement.
+
+## Files
+
+| File | Purpose |
+|------|---------|
+| `flags.config.ts` | **Registry** — the only file to edit when adding flags |
+| `src/lib/feature-flags.ts` | Runtime logic (D1 / env / defaults resolution) |
+| `src/middleware.ts` | Generic route gating loop (never needs editing for new flags) |
+| `src/pages/api/admin/flags.ts` | Admin API (GET all / POST toggle) |
+| `src/components/admin/_settings-modal/_flags-tab.tsx` | Admin UI toggle panel |
+| `src/env.d.ts` | `Env` interface with `FEATURE_*` index signature |

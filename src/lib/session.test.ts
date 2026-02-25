@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getCookie, setCookie, clearCookie, SESSION_COOKIE } from "./session";
+import { getCookie, setCookie, clearCookie, SESSION_COOKIE } from "./_session";
 
 describe("getCookie", () => {
   it("returns value when cookie present", () => {

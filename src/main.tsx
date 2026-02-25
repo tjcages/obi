@@ -1,6 +1,6 @@
 import "./styles.css";
 import { createRoot } from "react-dom/client";
-import App from "./App";
+import App from "./app";
 
 type Auth = { status: "ok"; userId: string } | { status: "unauthenticated" };
 
@@ -25,10 +25,7 @@ async function bootstrap() {
   }
 
   let path = window.location.pathname;
-  if (auth.status === "ok" && path === "/") {
-    window.history.replaceState(null, "", "/chat");
-    path = "/chat";
-  } else if (auth.status === "unauthenticated" && path === "/chat") {
+  if (auth.status === "unauthenticated" && path !== "/") {
     window.history.replaceState(null, "", "/");
     path = "/";
   }
@@ -39,7 +36,7 @@ async function bootstrap() {
 }
 
 const rootEl = document.getElementById("root")!;
-rootEl.innerHTML = "<div class='flex min-h-screen items-center justify-center bg-neutral-950 text-neutral-100'>Loading...</div>";
+rootEl.innerHTML = "<div class='flex min-h-screen items-center justify-center bg-background-100 text-foreground-300'>Loading...</div>";
 
 bootstrap().then(({ auth, path, authUrl, authUrlError, error }) => {
   createRoot(rootEl).render(

@@ -1,27 +1,13 @@
-import { useCallback, useSyncExternalStore } from "react";
-import Landing from "./pages/Landing";
-import ChatPage from "./pages/ChatPage";
+import { useSyncExternalStore } from "react";
+import { Agentation } from "agentation";
+import { Toaster } from "sonner";
+import { subscribeTheme, getTheme } from "./components";
+import { Landing, HomePage, InternalsPage, SettingsPage } from "./pages";
 
 type Auth = { status: "ok"; userId: string } | { status: "unauthenticated" };
 
-function getPath() {
-  return window.location.pathname;
-}
-
-function subscribePath(auth: Auth, cb: () => void) {
-  const onPop = () => {
-    if (auth.status === "ok" && window.location.pathname === "/") {
-      window.history.replaceState(null, "", "/chat");
-    }
-    cb();
-  };
-  window.addEventListener("popstate", onPop);
-  return () => window.removeEventListener("popstate", onPop);
-}
-
 export default function App({
   initialAuth,
-  initialPath,
   authUrl: initialAuthUrl,
   authUrlError: initialAuthUrlError,
   error: initialError,
@@ -32,17 +18,41 @@ export default function App({
   authUrlError: string | null;
   error: string | null;
 }) {
-  const subscribe = useCallback((cb: () => void) => subscribePath(initialAuth, cb), [initialAuth]);
-  const path = useSyncExternalStore(subscribe, getPath, () => initialPath);
+  const theme = useSyncExternalStore(subscribeTheme, getTheme, getTheme) as "light" | "dark";
 
-  if (path === "/chat" && initialAuth.status === "ok") {
-    return <ChatPage userId={initialAuth.userId} />;
-  }
+  const content = (() => {
+    if (initialAuth.status !== "ok") {
+      return (
+        <Landing
+          authUrl={initialAuthUrl}
+          authUrlError={initialAuthUrlError}
+          error={initialError}
+        />
+      );
+    }
+
+    if (typeof window !== "undefined" && window.location.pathname === "/internals") {
+      return <InternalsPage userId={initialAuth.userId} />;
+    }
+
+    if (typeof window !== "undefined" && window.location.pathname === "/settings") {
+      return <SettingsPage userId={initialAuth.userId} />;
+    }
+
+    return <HomePage userId={initialAuth.userId} />;
+  })();
+
   return (
-    <Landing
-      authUrl={initialAuthUrl}
-      authUrlError={initialAuthUrlError}
-      error={initialError}
-    />
+    <>
+      {content}
+      <Toaster
+        position="bottom-left"
+        theme={theme}
+        toastOptions={{
+          duration: 5000,
+        }}
+      />
+      {import.meta.env.DEV && <Agentation endpoint="http://localhost:4747" />}
+    </>
   );
 }

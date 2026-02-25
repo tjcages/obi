@@ -1,0 +1,480 @@
+---
+description: Development patterns for building UI components - file architecture, cn() utility, refactoring depth, single responsibility
+globs: "**/*.tsx,**/*.astro,**/*.ts"
+alwaysApply: true
+---
+
+# UI Development Patterns
+
+Code architecture and implementation patterns for building maintainable UI. These complement the visual design principles with structural best practices.
+
+## 1. The `cn()` Utility — Always
+
+**Principle:** Never concatenate class strings. Always use `cn()` for className composition.
+
+```tsx
+import { cn } from "@/lib/utils"
+
+// ✅ CORRECT — cn() merges and dedupes classes intelligently
+<div className={cn(
+  "flex items-center gap-2",
+  isActive && "bg-accent-100",
+  className
+)} />
+
+// ❌ WRONG — String concatenation breaks Tailwind IntelliSense
+<div className={`flex items-center gap-2 ${isActive ? "bg-accent-100" : ""} ${className}`} />
+
+// ❌ WRONG — Template literals lose merge behavior
+<div className={`flex items-center ${className}`} />
+```
+
+**Why `cn()` matters:**
+- Handles conditional classes cleanly
+- Merges conflicting Tailwind classes correctly (`cn("p-2", "p-4")` → `"p-4"`)
+- Preserves IntelliSense and autocomplete
+- Filters out falsy values automatically
+
+**Conditional Patterns:**
+```tsx
+cn(
+  // Base classes (always applied)
+  "rounded-lg border transition-colors",
+  
+  // Conditional classes
+  isActive && "border-accent-100 bg-accent-100/10",
+  isDisabled && "opacity-50 pointer-events-none",
+  
+  // Variant-based (using objects)
+  {
+    "bg-red-100 text-red-800": variant === "error",
+    "bg-green-100 text-green-800": variant === "success",
+  },
+  
+  // Consumer override (always last)
+  className
+)
+```
+
+## 2. File Naming Convention
+
+**Principle:** All files use **lowercase kebab-case**. Underscore prefix distinguishes internal modules from public entry points.
+
+**Format:** `_lowercase-kebab-case.tsx` — never PascalCase, never camelCase.
+
+```
+src/components/
+├── index.ts                      ← Barrel export (public API)
+├── _email-row.tsx                ← Internal component
+├── _inbox-list.tsx               ← Internal component
+├── _theme-toggle.tsx             ← Internal component
+├── _swipeable-email-row.tsx      ← Internal component
+├── error-card.test.ts            ← Test file (no underscore)
+├── chat-ui/
+│   ├── index.ts                  ← Sub-barrel export
+│   ├── _generative-ui-renderer.tsx
+│   ├── _inline-email-card.tsx
+│   └── _inline-email-preview.tsx
+└── internals/
+    ├── index.ts
+    ├── _pipeline-flow.tsx
+    └── _system-prompt-viewer.tsx
+
+src/lib/
+├── index.ts
+├── _utils.ts
+├── _use-memory.ts                ← Hook (kebab-case, not camelCase)
+├── _use-todos.ts
+├── _accounts.ts
+└── session.test.ts
+
+src/pages/
+├── index.ts
+├── _home-page.tsx
+├── _chat-page.tsx
+└── _settings-page.tsx
+```
+
+**Rules:**
+| File Type | Underscore | Example |
+|-----------|------------|---------|
+| Internal components | Yes | `_email-card.tsx` |
+| Internal hooks | Yes | `_use-memory.ts` |
+| Internal utilities | Yes | `_format-price.ts` |
+| Internal pages | Yes | `_home-page.tsx` |
+| Barrel exports | No | `index.ts` |
+| Test files | No | `email-card.test.ts` |
+| App entry point | No | `app.tsx`, `main.tsx`, `server.ts` |
+| Type definitions | No | `types.ts` |
+| Constants/config | No | `constants.ts` |
+
+**Naming format rules:**
+- **Always lowercase:** `_email-row.tsx` not `_EmailRow.tsx`
+- **Always kebab-case:** `_use-memory.ts` not `_useMemory.ts`
+- **Multi-word with dashes:** `_todo-suggestion-card.tsx` not `_todoSuggestionCard.tsx`
+- **Test files mirror source:** `_email-card.tsx` → `email-card.test.ts`
+
+**Why underscores:**
+- Visually separates "implementation" from "interface"
+- Barrel exports become obvious entry points
+- File explorers sort underscored files together
+- Clear signal: "don't import this directly"
+
+## 3. Barrel Exports
+
+**Principle:** Every folder with multiple files needs an `index.ts` barrel export.
+
+```ts
+// src/components/ui/index.ts
+export { Button, type ButtonProps } from "./_button"
+export { Input, type InputProps } from "./_input"
+export { Modal, type ModalProps } from "./_modal"
+export { Tooltip, type TooltipProps } from "./_tooltip"
+```
+
+**Consumer Usage:**
+```tsx
+// ✅ CORRECT — Import from barrel
+import { Button, Input, Modal } from "@/components/ui"
+
+// ❌ WRONG — Direct import bypasses barrel
+import { Button } from "@/components/ui/_button"
+```
+
+**Barrel Export Patterns:**
+```ts
+// Re-export everything
+export * from "./_button"
+
+// Re-export with rename
+export { Button as PrimaryButton } from "./_button"
+
+// Re-export types
+export type { ButtonProps, ButtonVariant } from "./_button"
+
+// Re-export default as named
+export { default as Button } from "./_button"
+```
+
+**When to create barrels:**
+- Any folder with 2+ related files
+- Component folders (`_components/`)
+- Hook folders (`_hooks/`)
+- Utility folders (`_utils/`)
+- Data folders (`_data/`)
+
+## 4. Deep Refactoring & Layered Architecture
+
+**Principle:** Break down complexity into layers. Each layer should be understandable in isolation.
+
+**Layer Depth Example:**
+```
+src/app/dashboard/
+├── page.astro                    ← L0: Route (1 line)
+├── _page.astro                   ← L1: Page layout (imports sections)
+├── _sections/
+│   ├── index.ts
+│   ├── _metrics-section.astro    ← L2: Section (imports cards)
+│   ├── _activity-section.astro
+│   └── _alerts-section.astro
+├── _components/
+│   ├── index.ts
+│   ├── _metric-card.tsx          ← L3: Component (imports primitives)
+│   ├── _activity-list.tsx
+│   ├── _alert-badge.tsx
+│   └── _sparkline.tsx            ← L4: Primitive visualization
+└── _hooks/
+    ├── index.ts
+    └── _use-dashboard-data.ts    ← Data fetching layer
+```
+
+**Reading Order (Top-Down):**
+```
+page.astro          → "This route renders DashboardPage"
+_page.astro         → "Dashboard has 3 sections: metrics, activity, alerts"
+_metrics-section    → "Metrics section shows 4 MetricCards"
+_metric-card        → "Each card shows label, value, trend, sparkline"
+_sparkline          → "Sparkline renders SVG path from data points"
+```
+
+**Refactoring Triggers:**
+- File > 150 lines → Split into sub-components
+- Component has > 3 responsibilities → Extract
+- Logic repeated > 2 times → Create shared utility/hook
+- Conditional rendering > 3 branches → Create variant components
+
+**Naming at Each Layer (always lowercase kebab-case):**
+```
+L0 (Entry):     app.tsx, main.tsx, server.ts
+L1 (Page):      _home-page.tsx, _settings-page.tsx
+L2 (Section):   _hero-section.tsx, _features-section.tsx
+L3 (Component): _email-card.tsx, _todo-item.tsx, _memory-panel.tsx
+L4 (Primitive):  _sparkline.tsx, _badge.tsx, _avatar.tsx
+```
+
+## 5. Single Responsibility Principle
+
+**Principle:** Each file should do exactly one thing. If you need "and" to describe it, split it.
+
+**❌ BAD — Multiple responsibilities:**
+```tsx
+// _dashboard.tsx - Does too much
+export function Dashboard() {
+  // Fetches data
+  const { data, loading } = useFetch("/api/metrics")
+  
+  // Formats data
+  const formattedMetrics = data?.map(m => ({
+    ...m,
+    value: formatNumber(m.value),
+    trend: calculateTrend(m.history),
+  }))
+  
+  // Renders multiple sections
+  return (
+    <div>
+      <MetricsGrid metrics={formattedMetrics} />
+      <ActivityFeed />
+      <AlertsList />
+    </div>
+  )
+}
+```
+
+**✅ GOOD — Single responsibility per file:**
+```tsx
+// _use-dashboard-metrics.ts — Fetches and transforms data
+export function useDashboardMetrics() {
+  const { data, loading } = useFetch("/api/metrics")
+  return {
+    metrics: data?.map(formatMetric) ?? [],
+    loading,
+  }
+}
+
+// _metrics-section.tsx — Renders metrics grid
+export function MetricsSection() {
+  const { metrics, loading } = useDashboardMetrics()
+  if (loading) return <MetricsSkeleton />
+  return <MetricsGrid metrics={metrics} />
+}
+
+// _dashboard-page.tsx — Composes sections
+export function DashboardPage() {
+  return (
+    <PageLayout>
+      <MetricsSection />
+      <ActivitySection />
+      <AlertsSection />
+    </PageLayout>
+  )
+}
+```
+
+**File Responsibility Guidelines:**
+
+| File Type | Single Responsibility |
+|-----------|----------------------|
+| Page | Compose sections into layout |
+| Section | Fetch data + render one content area |
+| Component | Render one visual unit |
+| Hook | Manage one piece of state/logic |
+| Utility | Perform one transformation |
+| Type | Define one domain's types |
+
+## 6. Component Composition Patterns
+
+**Principle:** Prefer composition over configuration. Small components that combine > large components with many props.
+
+**❌ BAD — Mega-component with many props:**
+```tsx
+<Card
+  title="Metrics"
+  subtitle="Last 24 hours"
+  icon={<ChartIcon />}
+  value={1234}
+  trend="+12%"
+  trendDirection="up"
+  showSparkline
+  sparklineData={data}
+  footer={<Button>View Details</Button>}
+  variant="elevated"
+  size="large"
+/>
+```
+
+**✅ GOOD — Composed from small parts:**
+```tsx
+<Card variant="elevated">
+  <Card.Header>
+    <Card.Icon><ChartIcon /></Card.Icon>
+    <Card.Title>Metrics</Card.Title>
+    <Card.Subtitle>Last 24 hours</Card.Subtitle>
+  </Card.Header>
+  <Card.Body>
+    <MetricValue value={1234} />
+    <TrendBadge value="+12%" direction="up" />
+    <Sparkline data={data} />
+  </Card.Body>
+  <Card.Footer>
+    <Button>View Details</Button>
+  </Card.Footer>
+</Card>
+```
+
+**Compound Component Pattern:**
+```tsx
+// _card.tsx
+export function Card({ children, className, variant }: CardProps) {
+  return (
+    <div className={cn(cardVariants({ variant }), className)}>
+      {children}
+    </div>
+  )
+}
+
+Card.Header = function CardHeader({ children, className }: PropsWithChildren<{ className?: string }>) {
+  return <div className={cn("flex items-center gap-2 p-4", className)}>{children}</div>
+}
+
+Card.Body = function CardBody({ children, className }: PropsWithChildren<{ className?: string }>) {
+  return <div className={cn("px-4 pb-4", className)}>{children}</div>
+}
+
+Card.Footer = function CardFooter({ children, className }: PropsWithChildren<{ className?: string }>) {
+  return <div className={cn("border-t border-border-100 p-4", className)}>{children}</div>
+}
+```
+
+## 7. Props Interface Patterns
+
+**Principle:** Explicit, well-documented prop interfaces make components self-documenting.
+
+```tsx
+import { type ComponentPropsWithoutRef } from "react"
+
+// Extend native element props
+interface ButtonProps extends ComponentPropsWithoutRef<"button"> {
+  /** Visual style variant */
+  variant?: "default" | "outline" | "ghost" | "destructive"
+  /** Size preset */
+  size?: "sm" | "md" | "lg"
+  /** Show loading spinner and disable interactions */
+  loading?: boolean
+}
+
+// Use VariantProps for CVA integration
+interface ButtonProps 
+  extends ComponentPropsWithoutRef<"button">,
+    VariantProps<typeof buttonVariants> {
+  loading?: boolean
+}
+
+// Children pattern
+interface CardProps extends PropsWithChildren {
+  className?: string
+  variant?: "default" | "elevated"
+}
+
+// Render prop pattern
+interface ListProps<T> {
+  items: T[]
+  renderItem: (item: T, index: number) => ReactNode
+  keyExtractor: (item: T) => string
+}
+```
+
+## 8. Import Organization
+
+**Principle:** Consistent import ordering makes dependencies scannable.
+
+```tsx
+// 1. React/framework imports
+import { useState, useEffect, type ReactNode } from "react"
+
+// 2. External library imports
+import { cva, type VariantProps } from "class-variance-authority"
+import { motion, AnimatePresence } from "framer-motion"
+
+// 3. Internal absolute imports (@/)
+import { cn } from "@/lib/utils"
+import { Button, Input } from "@/components/ui"
+import { useAuth } from "@/hooks"
+
+// 4. Relative imports (same module)
+import { formatMetric } from "./_utils"
+import { type MetricData } from "./_types"
+
+// 5. Types (if separate)
+import type { DashboardProps } from "./types"
+
+// 6. Styles/assets (rare in Tailwind projects)
+import "./styles.css"
+```
+
+**Biome auto-sorts imports** — run `pnpm fix-imports` to organize.
+
+## 9. Error Boundaries & Loading States
+
+**Principle:** Every async component needs loading and error handling.
+
+```tsx
+// _metrics-section.tsx
+export function MetricsSection() {
+  const { data, loading, error } = useMetrics()
+  
+  if (error) {
+    return <ErrorState message="Failed to load metrics" retry={refetch} />
+  }
+  
+  if (loading) {
+    return <MetricsSkeleton />
+  }
+  
+  return <MetricsGrid metrics={data} />
+}
+```
+
+**Skeleton Pattern:**
+```tsx
+// _metrics-skeleton.tsx
+export function MetricsSkeleton() {
+  return (
+    <div className="grid grid-cols-3 gap-4">
+      {[1, 2, 3].map(i => (
+        <div key={i} className="h-24 animate-pulse rounded-lg bg-foreground-100/5" />
+      ))}
+    </div>
+  )
+}
+```
+
+---
+
+## Quick Reference
+
+**File Naming:**
+```
+_email-card.tsx       ← Underscore + kebab-case = internal
+index.ts              ← No underscore = public API / barrel
+email-card.test.ts    ← No underscore = test file
+app.tsx               ← No underscore = entry point
+```
+
+**Class Names:**
+```tsx
+cn("base", conditional && "active", className)  // ✅
+`base ${conditional ? "active" : ""}`           // ❌
+```
+
+**Imports:**
+```tsx
+import { X } from "@/components/ui"    // ✅ From barrel
+import { X } from "@/components/ui/_x" // ❌ Direct to internal
+```
+
+**Refactoring Triggers:**
+- File > 150 lines
+- Component > 3 responsibilities  
+- Logic repeated > 2 times
+- Props > 8 properties

@@ -5,7 +5,7 @@ import {
   ScriptResult,
   EmailListResult,
   RawResult,
-} from "./script";
+} from "./_script";
 
 describe("GmailScriptArgs", () => {
   it("decodes valid code and intent", () => {

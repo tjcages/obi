@@ -1,2 +1,2 @@
-export * from "./errors";
-export * from "./script";
+export * from "./_errors";
+export * from "./_script";

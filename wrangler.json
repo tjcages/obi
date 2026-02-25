@@ -21,9 +21,18 @@
   },
   "worker_loaders": [{ "binding": "LOADER" }],
   "services": [{ "binding": "INBOX_DOG", "service": "inbox-dog-oauth-production" }],
+  "r2_buckets": [
+    { "binding": "WORKSPACE_FILES", "bucket_name": "obi-workspace-files" }
+  ],
   "durable_objects": {
-    "bindings": [{ "name": "INBOX_AGENT", "class_name": "InboxAgent" }]
+    "bindings": [
+      { "name": "INBOX_AGENT", "class_name": "InboxAgent" },
+      { "name": "SCHEDULED_SENDER", "class_name": "ScheduledSender" }
+    ]
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["InboxAgent"] }],
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["InboxAgent"] },
+    { "tag": "v2", "new_sqlite_classes": ["ScheduledSender"] }
+  ],
   "routes": []
 }
