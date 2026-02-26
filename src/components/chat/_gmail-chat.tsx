@@ -169,7 +169,7 @@ function renderInlineMarkdown(text: string): ReactNode {
   return <>{parts}</>;
 }
 
-function renderMarkdownText(text: string): ReactNode {
+export function renderMarkdownText(text: string): ReactNode {
   const lines = text.split("\n");
   const elements: ReactNode[] = [];
   let i = 0;
@@ -736,7 +736,7 @@ function MessageList({
                   transition={{ duration: 0.2, delay: 0.03 }}
                   className="group mt-5 flex justify-end first:mt-0"
                 >
-                  <div className="min-w-0 max-w-[80%] shrink-0 overflow-hidden whitespace-pre-wrap wrap-break-word rounded-2xl bg-foreground-100/6 px-4 py-2.5 text-[15px] leading-relaxed text-foreground-100 select-text">
+                  <div className="min-w-0 max-w-[80%] shrink-0 overflow-hidden whitespace-pre-wrap wrap-break-word rounded-2xl bg-foreground-100/8 px-4 py-2.5 text-[15px] leading-relaxed text-foreground-100 select-text">
                     {msg.parts.map((part, index) => {
                       if (isTextUIPart(part)) {
                         return <div key={`${msg.id}-part-${index}`} className="overflow-hidden wrap-break-word">{part.text}</div>;
@@ -806,9 +806,8 @@ function MessageList({
                   }
                   return null;
                 })}
-                {/* Hover action bar */}
                 {fullText && (
-                  <div className="mt-1 flex h-0 items-center gap-1 overflow-hidden opacity-0 transition-all duration-150 group-hover:h-7 group-hover:opacity-100">
+                  <div className="mt-0.5 flex h-6 items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
                     <CopyButton text={fullText} />
                   </div>
                 )}
@@ -865,17 +864,22 @@ function GettingStartedView({ onPromptClick }: { onPromptClick: (text: string) =
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          className="flex flex-col items-center gap-6"
+          className="flex flex-col items-center gap-8"
         >
-          <div className="flex flex-col items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent-100/10">
-              <Sparkle size={20} weight="fill" className="text-accent-100" />
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-100/8">
+              <Sparkle size={24} weight="fill" className="text-accent-100" />
             </div>
-            <p className="text-sm text-foreground-300">
-              Ask about your inbox
-            </p>
+            <div className="text-center">
+              <p className="text-[15px] font-semibold text-foreground-100">
+                Ask about your inbox
+              </p>
+              <p className="mt-1 text-[13px] text-foreground-300/60">
+                Search emails, summarize threads, draft replies
+              </p>
+            </div>
           </div>
-          <div className="flex flex-wrap justify-center gap-2">
+          <div className="flex max-w-lg flex-wrap justify-center gap-2">
             {GETTING_STARTED_PROMPTS.map((prompt, i) => (
               <motion.button
                 key={prompt}
@@ -884,7 +888,7 @@ function GettingStartedView({ onPromptClick }: { onPromptClick: (text: string) =
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2, delay: i * 0.04 }}
                 onClick={() => onPromptClick(prompt)}
-                className="rounded-full border border-border-100 bg-background-100 px-3.5 py-1.5 text-[13px] text-foreground-200 transition-colors hover:border-foreground-300/40 hover:text-foreground-100"
+                className="rounded-xl border border-border-100/70 bg-background-100 px-3.5 py-2 text-[13px] text-foreground-200 transition-all hover:border-foreground-300/30 hover:bg-foreground-100/3 hover:text-foreground-100"
               >
                 {prompt}
               </motion.button>
@@ -1105,7 +1109,7 @@ function ChatInputBar({
   };
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-5 pb-5 pt-2">
+    <div className="mx-auto w-full max-w-2xl px-5 pb-4 pt-2">
       <AnimatePresence>
         {queuedMessage && onEditQueued && onDeleteQueued && onSendNowQueued && onUnqueueQueued && (
           <QueuedMessageCard
@@ -1121,7 +1125,7 @@ function ChatInputBar({
         className="flex items-end gap-2"
         onSubmit={onSubmit}
       >
-        <div className="flex min-w-0 flex-1 items-end rounded-2xl border border-border-100 bg-background-200 transition-all focus-within:border-foreground-300/50 focus-within:bg-background-100 focus-within:shadow-lg">
+        <div className="flex min-w-0 flex-1 items-end rounded-2xl border border-border-100/80 bg-background-200/80 transition-all focus-within:border-foreground-300/40 focus-within:bg-background-100 focus-within:shadow-lg">
           <textarea
             ref={textareaRef}
             value={input}
@@ -1131,7 +1135,7 @@ function ChatInputBar({
             disabled={disabled}
             rows={1}
             aria-label="Chat message"
-            className="flex-1 resize-none bg-transparent py-3 pl-4 pr-2 text-[15px] leading-[24px] text-foreground-100 outline-none placeholder:text-foreground-300 disabled:opacity-40"
+            className="flex-1 resize-none bg-transparent py-3 pl-4 pr-2 text-[15px] leading-[24px] text-foreground-100 outline-none placeholder:text-foreground-300/50 disabled:opacity-40"
             style={{ minHeight: MIN_HEIGHT, maxHeight: MAX_HEIGHT }}
           />
           <div className="flex shrink-0 items-center gap-1.5 pb-2 pr-2">
@@ -1163,6 +1167,16 @@ function ChatInputBar({
           </div>
         </div>
       </form>
+      <div className="mt-1.5 flex items-center justify-center gap-3 text-[11px] text-foreground-300/30">
+        <span className="flex items-center gap-1">
+          <kbd className="rounded border border-foreground-100/10 bg-foreground-100/5 px-1 py-px font-mono text-[10px]">↵</kbd>
+          Send
+        </span>
+        <span className="flex items-center gap-1">
+          <kbd className="rounded border border-foreground-100/10 bg-foreground-100/5 px-1 py-px font-mono text-[10px]">⇧↵</kbd>
+          New line
+        </span>
+      </div>
     </div>
   );
 }
@@ -1381,14 +1395,21 @@ export function GmailChat({
   if (!hasConversation || !roomName) {
     return (
       <div className="flex h-full flex-col items-center justify-center px-5 py-8 text-center">
-        <p className="mb-4 text-sm text-foreground-300">
+        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className="mb-3 text-foreground-300/20">
+          <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+        </svg>
+        <p className="text-[15px] font-medium text-foreground-300/60">
           No conversation selected
+        </p>
+        <p className="mt-1 text-[13px] text-foreground-300/40">
+          Pick a conversation or start a new one
         </p>
         <button
           type="button"
           onClick={onCreateConversation}
-          className="rounded-xl bg-foreground-100 px-4 py-2.5 text-sm font-medium text-background-100 transition-colors hover:bg-foreground-100/90"
+          className="mt-5 flex items-center gap-2 rounded-xl bg-foreground-100 px-5 py-2.5 text-sm font-medium text-background-100 transition-colors hover:bg-foreground-100/90"
         >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
           Start new conversation
         </button>
       </div>
@@ -1400,8 +1421,9 @@ export function GmailChat({
   return (
     <div className="flex h-full min-w-0 flex-col">
       {!conversationReady && (
-        <div className="border-b border-border-100/50 bg-background-200/50 px-5 py-2 text-[13px] text-foreground-300">
-          Preparing this conversation...
+        <div className="flex items-center gap-2 border-b border-border-100/40 bg-background-200/30 px-5 py-2">
+          <div className="h-3 w-3 animate-spin rounded-full border-2 border-foreground-300/20 border-t-foreground-300/60" />
+          <span className="text-[13px] text-foreground-300/60">Preparing conversation...</span>
         </div>
       )}
       {showGettingStarted ? (

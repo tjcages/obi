@@ -58,6 +58,7 @@ export interface TodoPreferences {
   preferredScheduling: string;
   autoSuggest: boolean;
   addToTop: boolean;
+  dashboardSectionOrder?: string[];
   todoCategories?: string[];
   categoryColors?: Record<string, string>;
 }
@@ -82,6 +83,7 @@ interface UseTodosReturn {
   undeclineSuggestion: (id: string, originalTodo: TodoItem) => Promise<void>;
   saveCategories: (categories: string[]) => Promise<void>;
   saveCategoryColor: (category: string, hex: string | null) => Promise<void>;
+  saveDashboardOrder: (order: string[]) => Promise<void>;
 }
 
 const DEFAULT_PREFS: TodoPreferences = {
@@ -443,6 +445,22 @@ export function useTodos(): UseTodosReturn {
     }
   }, [refresh]);
 
+  const saveDashboardOrder = useCallback(async (order: string[]) => {
+    pendingMutations.current++;
+    setPreferences((prev) => ({ ...prev, dashboardSectionOrder: order }));
+    try {
+      await fetch("/api/todos/preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dashboardSectionOrder: order }),
+      });
+    } catch {
+      await refresh();
+    } finally {
+      pendingMutations.current--;
+    }
+  }, [refresh]);
+
   return {
     todos,
     preferences,
@@ -463,5 +481,6 @@ export function useTodos(): UseTodosReturn {
     undeclineSuggestion,
     saveCategories,
     saveCategoryColor,
+    saveDashboardOrder,
   };
 }

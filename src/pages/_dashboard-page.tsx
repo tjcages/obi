@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, animate, motion, useMotionValue, useTransform } from "motion/react";
 import { useNavStackContext } from "../components/nav-stack";
 import {
@@ -931,16 +931,26 @@ function SlackWidget({ threads }: { threads: SlackThread[] }) {
         count={threads.length}
         countColor="bg-[#4A154B]"
       />
-      <ul className="space-y-1">
+      <ul className="space-y-2">
         {threads.slice(0, 3).map((t) => {
           const channel = t.channelName ? `#${t.channelName}` : "DM";
           const lastMsg = t.messages[t.messages.length - 1];
+          const participants = [...new Set(t.messages.map((m) => m.userName))];
           return (
-            <li key={`${t.channelId}:${t.threadTs}`} className="truncate">
-              <span className="text-[12px] font-medium text-foreground-200">{channel}</span>
-              <span className="ml-1.5 text-[12px] text-foreground-300/50 truncate">
-                {lastMsg?.text?.slice(0, 60) ?? ""}
-              </span>
+            <li key={`${t.channelId}:${t.threadTs}`} className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-medium text-foreground-100/60 shrink-0">{channel}</span>
+                <span className="text-foreground-100/15 text-[10px]">&middot;</span>
+                <span className="truncate text-[12px] text-foreground-200">
+                  {participants.join(", ")}
+                </span>
+                <span className="ml-auto shrink-0 text-[10px] text-foreground-300/40">
+                  {formatRelativeTime(t.receivedAt)}
+                </span>
+              </div>
+              <p className="mt-0.5 truncate text-[12px] leading-snug text-foreground-300/60">
+                {lastMsg?.text?.slice(0, 80) ?? ""}
+              </p>
             </li>
           );
         })}
@@ -1047,7 +1057,7 @@ function DotIndicator({
   });
 
   return (
-    <div className="flex items-center justify-center gap-1.5 py-3">
+    <div className="pointer-events-none absolute bottom-3 left-0 right-0 flex items-center justify-center gap-2">
       {Array.from({ length: count }, (_, i) => (
         <CarouselDot key={i} index={i} progress={progress} />
       ))}
@@ -1074,7 +1084,7 @@ function CarouselDot({
 
   return (
     <motion.div
-      className="h-[6px] rounded-full bg-foreground-100"
+      className="h-[6px] rounded-full bg-foreground-100/20 backdrop-blur-md"
       style={{ width, opacity }}
     />
   );
@@ -1257,7 +1267,7 @@ function WidgetCarousel({ pages }: { pages: CarouselPageDef[] }) {
   }, [pages.length, offsetX]);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="relative flex min-h-0 flex-1 flex-col">
       {/* Page label */}
       <div className="px-4 pb-1">
         <AnimatePresence mode="wait">
@@ -1408,15 +1418,31 @@ export default function DashboardPage({ userId }: DashboardPageProps) {
     />
   );
 
-  const carouselPages: CarouselPageDef[] = [
-    { id: "todos", label: "Todos", content: todoWidget },
-  ];
-  if (mailWidget) carouselPages.push({ id: "mail", label: "Mail", content: mailWidget });
-  carouselPages.push({ id: "projects", label: "Projects", content: projectsWidget });
-  if (!slack.loading && slack.threads.length > 0) {
-    carouselPages.push({ id: "slack", label: "Slack", content: <SlackWidget threads={slack.threads} /> });
-  }
-  carouselPages.push({ id: "chats", label: "Chats", content: <ChatsWidget conversations={conv.sortedActive} userId={userId} /> });
+  const slackWidget = !slack.loading && slack.threads.length > 0
+    ? <SlackWidget threads={slack.threads} />
+    : null;
+  const chatsWidget = <ChatsWidget conversations={conv.sortedActive} userId={userId} />;
+
+  const allSections: Record<string, { label: string; content: React.ReactNode | null }> = {
+    todos: { label: "Todos", content: todoWidget },
+    mail: { label: "Mail", content: mailWidget },
+    projects: { label: "Projects", content: projectsWidget },
+    slack: { label: "Slack", content: slackWidget },
+    chats: { label: "Chats", content: chatsWidget },
+  };
+
+  const savedOrder = todoState.preferences.dashboardSectionOrder;
+  const sectionOrder = savedOrder?.length
+    ? [...savedOrder, ...Object.keys(allSections).filter((id) => !savedOrder.includes(id))]
+    : ["todos", "mail", "projects", "slack", "chats"];
+
+  const carouselPages: CarouselPageDef[] = sectionOrder
+    .filter((id) => allSections[id]?.content != null)
+    .map((id) => ({ id, label: allSections[id].label, content: allSections[id].content! }));
+
+  const orderedDesktopWidgets = sectionOrder
+    .filter((id) => allSections[id]?.content != null)
+    .map((id) => <React.Fragment key={id}>{allSections[id].content}</React.Fragment>);
 
   return (
     <div className={cn("h-dvh bg-background-100 text-foreground-100", isMobile ? "flex flex-col" : "overflow-y-auto")}>
@@ -1453,11 +1479,7 @@ export default function DashboardPage({ userId }: DashboardPageProps) {
           transition={{ duration: 0.3, ease: "easeOut" }}
         >
           <div className="grid grid-cols-2 gap-2">
-            {todoWidget}
-            {mailWidget}
-            {projectsWidget}
-            {!slack.loading && <SlackWidget threads={slack.threads} />}
-            <ChatsWidget conversations={conv.sortedActive} userId={userId} />
+            {orderedDesktopWidgets}
             <UtilityRow />
           </div>
         </motion.main>

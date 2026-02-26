@@ -56,6 +56,7 @@ export interface TodoPreferences {
   preferredScheduling: string;
   autoSuggest: boolean;
   addToTop: boolean;
+  dashboardSectionOrder?: string[];
   todoCategories?: string[];
 }
 

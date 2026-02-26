@@ -14,9 +14,10 @@ import {
 import { isTextUIPart, type UIMessage } from "ai";
 import { useAgentChat } from "@cloudflare/ai-chat/react";
 import { useAgent } from "agents/react";
-import { ArrowUp, X } from "@phosphor-icons/react";
+import { ArrowUp, X, Sparkle } from "@phosphor-icons/react";
 import { toConversationRoomName, cn, useIsMobile } from "../../lib";
 import { formatChatError } from "./_chat-utils";
+import { renderMarkdownText } from "./_gmail-chat";
 import { GenerativeUIRenderer, isDisplayTool } from "./chat-ui";
 import { Drawer } from "../ui/_drawer";
 
@@ -301,15 +302,20 @@ function ChatModalContent({
   const titleBar = (
     <div
       className={cn(
-        "flex shrink-0 items-center justify-between border-b border-border-100/50 px-5 py-3",
+        "flex shrink-0 items-center justify-between border-b border-border-100/40 px-5 py-3",
         !isMobile && "cursor-grab active:cursor-grabbing",
       )}
       style={isMobile ? undefined : { touchAction: "none" }}
       onPointerDown={isMobile ? undefined : (e) => dragControls.start(e)}
     >
-      <span className="truncate text-sm font-semibold text-foreground-100">
-        {title}
-      </span>
+      <div className="flex min-w-0 items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-foreground-300/50">
+          <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+        </svg>
+        <span className="truncate text-[14px] font-semibold text-foreground-100">
+          {title}
+        </span>
+      </div>
       {!isMobile && (
         <button
           type="button"
@@ -318,9 +324,9 @@ function ChatModalContent({
             onDismiss();
           }}
           aria-label="Close"
-          className="rounded-lg p-1.5 text-foreground-300 transition-colors hover:bg-foreground-100/8 hover:text-foreground-200"
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-foreground-300/50 transition-colors hover:bg-foreground-100/5 hover:text-foreground-200"
         >
-          <X size={16} weight="bold" />
+          <X size={14} weight="bold" />
         </button>
       )}
     </div>
@@ -333,17 +339,24 @@ function ChatModalContent({
     >
       <div className="mx-auto flex w-full max-w-xl flex-col gap-1 px-5 py-6">
         {!conversationReady && (
-          <div className="text-xs text-foreground-300">
-            Connecting...
+          <div className="flex items-center gap-2 py-2">
+            <div className="h-3 w-3 animate-spin rounded-full border-2 border-foreground-300/20 border-t-foreground-300/60" />
+            <span className="text-[13px] text-foreground-300/60">Connecting...</span>
           </div>
         )}
 
         {visibleMessages.length === 0 &&
           conversationReady &&
           !isLoading && (
-            <div className="flex flex-1 items-center justify-center py-12">
-              <p className="text-sm text-foreground-300">
+            <div className="flex flex-1 flex-col items-center justify-center py-12">
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-accent-100/8">
+                <Sparkle size={20} weight="fill" className="text-accent-100" />
+              </div>
+              <p className="text-[14px] font-medium text-foreground-300/60">
                 Ask a question below
+              </p>
+              <p className="mt-0.5 text-[12px] text-foreground-300/40">
+                Chat about this conversation
               </p>
             </div>
           )}
@@ -383,7 +396,7 @@ function ChatModalContent({
                 transition={{ duration: 0.2, delay: idx * 0.03 }}
                 className="mt-5 flex justify-end first:mt-0"
               >
-                <div className="max-w-[80%] whitespace-pre-wrap wrap-break-word rounded-2xl bg-foreground-100/6 px-4 py-2.5 text-[15px] leading-relaxed text-foreground-100 select-text">
+                <div className="max-w-[80%] whitespace-pre-wrap wrap-break-word rounded-2xl bg-foreground-100/8 px-4 py-2.5 text-[15px] leading-relaxed text-foreground-100 select-text">
                   {msg.parts.map((part, i) =>
                     isTextUIPart(part) ? (
                       <span key={`${msg.id}-${i}`}>{part.text}</span>
@@ -418,9 +431,9 @@ function ChatModalContent({
                       initial={{ opacity: 0, y: 6 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.2, delay: idx * 0.03 }}
-                      className="mt-1 whitespace-pre-wrap wrap-break-word text-[15px] leading-[1.7] text-foreground-200 select-text"
+                      className="mt-1 w-full min-w-0 whitespace-pre-wrap wrap-break-word text-[15px] leading-[1.7] text-foreground-200 select-text"
                     >
-                      {part.text}
+                      {renderMarkdownText(part.text)}
                     </motion.div>
                   );
                 }
@@ -458,12 +471,12 @@ function ChatModalContent({
   );
 
   const inputArea = (
-    <div className="border-t border-border-100/50 px-4 py-3">
+    <div className="border-t border-border-100/40 px-4 py-3">
       <form
         onSubmit={handleSubmit}
         className="flex items-end gap-2"
       >
-        <div className="flex min-w-0 flex-1 items-end rounded-2xl border border-border-100 bg-background-200 transition-all focus-within:border-foreground-300/50 focus-within:bg-background-100 focus-within:shadow-lg">
+        <div className="flex min-w-0 flex-1 items-end rounded-2xl border border-border-100/80 bg-background-200/80 transition-all focus-within:border-foreground-300/40 focus-within:bg-background-100 focus-within:shadow-lg">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -477,7 +490,7 @@ function ChatModalContent({
             ref={inputRef}
             disabled={inputDisabled}
             rows={1}
-            className="flex-1 resize-none bg-transparent py-3 pl-4 pr-2 text-[15px] leading-[24px] text-foreground-100 outline-none placeholder:text-foreground-300 disabled:opacity-40"
+            className="flex-1 resize-none bg-transparent py-3 pl-4 pr-2 text-[15px] leading-[24px] text-foreground-100 outline-none placeholder:text-foreground-300/50 disabled:opacity-40"
             style={{ minHeight: TEXTAREA_MIN_HEIGHT, maxHeight: TEXTAREA_MAX_HEIGHT }}
           />
           <div className="flex shrink-0 items-center gap-1.5 pb-2 pr-2">
@@ -527,7 +540,7 @@ function ChatModalContent({
     <>
       <motion.div
         key="chat-modal-backdrop"
-        className="fixed inset-0 z-60 bg-black/40 backdrop-blur-sm"
+        className="fixed inset-0 z-60 bg-black/50 backdrop-blur-sm"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -538,7 +551,7 @@ function ChatModalContent({
       <div className="fixed inset-0 z-70 flex items-center justify-center pointer-events-none">
         <motion.div
           key="chat-modal-sheet"
-          className="pointer-events-auto flex w-full max-w-[680px] flex-col overflow-hidden rounded-2xl border border-border-100/50 bg-background-100 shadow-2xl"
+          className="pointer-events-auto flex w-full max-w-[680px] flex-col overflow-hidden rounded-2xl border border-border-100/40 bg-background-100 shadow-2xl"
           style={{ height: "78dvh" }}
           initial={{ y: "100%", opacity: 0.8 }}
           animate={{ y: 0, opacity: 1 }}

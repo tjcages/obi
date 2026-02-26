@@ -121,6 +121,26 @@ const NAV_GROUPS: { id: string; label: string; icon: React.ReactNode }[][] = [
   ],
 ];
 
+// ── Dashboard section order ──
+
+const DEFAULT_DASHBOARD_ORDER = ["todos", "mail", "projects", "slack", "chats"];
+
+const DASHBOARD_SECTION_LABELS: Record<string, string> = {
+  todos: "To-dos",
+  mail: "Mail",
+  projects: "Projects",
+  slack: "Slack",
+  chats: "Chats",
+};
+
+const DASHBOARD_SECTION_ICONS: Record<string, React.ReactNode> = {
+  todos: <><path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></>,
+  mail: <><rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7" /></>,
+  projects: <><path d="M2 20a2 2 0 002 2h16a2 2 0 002-2V8l-7 4V4a2 2 0 00-2-2H4a2 2 0 00-2 2v16z" /><path d="M17 8l5-3" /></>,
+  slack: <><path d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5z" /><path d="M20.5 10H19V8.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" /><path d="M9.5 14c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5S8 21.33 8 20.5v-5c0-.83.67-1.5 1.5-1.5z" /><path d="M3.5 14H5v1.5c0 .83-.67 1.5-1.5 1.5S2 16.33 2 15.5 2.67 14 3.5 14z" /><path d="M14 14.5c0-.83.67-1.5 1.5-1.5h5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-5c-.83 0-1.5-.67-1.5-1.5z" /><path d="M15.5 19H14v1.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z" /><path d="M10 9.5C10 8.67 9.33 8 8.5 8h-5C2.67 8 2 8.67 2 9.5S2.67 11 3.5 11h5c.83 0 1.5-.67 1.5-1.5z" /><path d="M8.5 5H10V3.5C10 2.67 9.33 2 8.5 2S7 2.67 7 3.5 7.67 5 8.5 5z" /></>,
+  chats: <><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" /></>,
+};
+
 // ── Scan types ──
 
 interface ScanConfig {
@@ -179,6 +199,7 @@ export default function SettingsPage({ userId, embedded }: { userId: string; emb
   const [searchKeyDraft, setSearchKeyDraft] = useState("");
   const [searchKeySaving, setSearchKeySaving] = useState(false);
   const [addToTop, setAddToTop] = useState(true);
+  const [dashboardOrder, setDashboardOrder] = useState<string[]>(DEFAULT_DASHBOARD_ORDER);
 
   const themePreference = useSyncExternalStore(subscribeTheme, getThemePreference, () => "system" as ThemePreference);
   const monoCategories = useSyncExternalStore(subscribeMonoCategories, getMonoCategories, () => false);
@@ -192,7 +213,7 @@ export default function SettingsPage({ userId, embedded }: { userId: string; emb
       fetch("/api/accounts").then((r) => r.json()).catch(() => ({ accounts: [] })) as Promise<{ accounts: ConnectedAccountPublic[] }>,
       fetch("/api/scan/status").then((r) => r.json()).catch(() => null) as Promise<ScanStatus | null>,
       fetch("/api/settings/search").then((r) => r.json()).catch(() => null) as Promise<{ config: { provider: string; apiKeyMasked?: string; hasApiKey: boolean } } | null>,
-      fetch("/api/todos/preferences").then((r) => r.json()).catch(() => null) as Promise<{ addToTop?: boolean } | null>,
+      fetch("/api/todos/preferences").then((r) => r.json()).catch(() => null) as Promise<{ addToTop?: boolean; dashboardSectionOrder?: string[] } | null>,
     ]).then(([m, p, a, s, search, todoPrefs]) => {
       if (cancelled) return;
       setModelConfig(m.config);
@@ -203,6 +224,7 @@ export default function SettingsPage({ userId, embedded }: { userId: string; emb
       if (s) { setScanConfig(s.config); setScanUsage(s.usage); setScanNextAlarm(s.nextAlarmAt); }
       if (search) { setSearchHasKey(search.config.hasApiKey); setSearchKeyMasked(search.config.apiKeyMasked); }
       if (todoPrefs && typeof todoPrefs.addToTop === "boolean") setAddToTop(todoPrefs.addToTop);
+      if (todoPrefs?.dashboardSectionOrder?.length) setDashboardOrder(todoPrefs.dashboardSectionOrder);
       setLoading(false);
     }).catch(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
@@ -280,6 +302,21 @@ export default function SettingsPage({ userId, embedded }: { userId: string; emb
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ addToTop: value }),
+    });
+  }, []);
+
+  const moveDashboardSection = useCallback((index: number, direction: -1 | 1) => {
+    setDashboardOrder((prev) => {
+      const next = [...prev];
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= next.length) return prev;
+      [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+      void fetch("/api/todos/preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dashboardSectionOrder: next }),
+      });
+      return next;
     });
   }, []);
 
@@ -572,6 +609,53 @@ export default function SettingsPage({ userId, embedded }: { userId: string; emb
             <SettingsRow label="Mono Projects" desc="Use a uniform muted style for project badges instead of colors" onClick={() => setMonoCategories(!monoCategories)}>
               <Toggle checked={monoCategories} onChange={() => setMonoCategories(!monoCategories)} />
             </SettingsRow>
+          </SettingsCard>
+          <div className="mt-5" />
+          <SectionLabel>Dashboard Sections</SectionLabel>
+          <SettingsCard>
+            <div className="px-4 py-3 lg:px-5 lg:py-3">
+              <div className="text-sm font-medium text-foreground-100 lg:text-[13.5px]">Section Order</div>
+              <div className="mt-0.5 mb-3 text-[13px] leading-snug text-foreground-300 lg:text-[12.5px]">Drag sections to reorder how they appear on your dashboard</div>
+              <div className="space-y-1">
+                {dashboardOrder.map((sectionId, index) => (
+                  <div
+                    key={sectionId}
+                    className="flex items-center gap-3 rounded-lg bg-foreground-100/3 px-3 py-2.5 lg:py-2"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-foreground-300/50">
+                      {DASHBOARD_SECTION_ICONS[sectionId]}
+                    </svg>
+                    <span className="flex-1 text-[14px] font-medium text-foreground-100 lg:text-[13px]">
+                      {DASHBOARD_SECTION_LABELS[sectionId] ?? sectionId}
+                    </span>
+                    <div className="flex items-center gap-0.5">
+                      <button
+                        type="button"
+                        disabled={index === 0}
+                        onClick={() => moveDashboardSection(index, -1)}
+                        className="flex h-7 w-7 items-center justify-center rounded-md text-foreground-300 transition-colors hover:bg-foreground-100/8 hover:text-foreground-100 disabled:opacity-20 disabled:pointer-events-none"
+                        aria-label="Move up"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M18 15l-6-6-6 6" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={index === dashboardOrder.length - 1}
+                        onClick={() => moveDashboardSection(index, 1)}
+                        className="flex h-7 w-7 items-center justify-center rounded-md text-foreground-300 transition-colors hover:bg-foreground-100/8 hover:text-foreground-100 disabled:opacity-20 disabled:pointer-events-none"
+                        aria-label="Move down"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M6 9l6 6 6-6" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </SettingsCard>
         </>
       )}
