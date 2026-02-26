@@ -1134,6 +1134,7 @@ export class InboxAgent extends AIChatAgent<AgentEnv> {
         preferredScheduling: typeof body.preferredScheduling === "string" ? body.preferredScheduling : current.preferredScheduling,
         autoSuggest: typeof body.autoSuggest === "boolean" ? body.autoSuggest : current.autoSuggest,
         addToTop: typeof body.addToTop === "boolean" ? body.addToTop : current.addToTop,
+        dashboardSectionOrder: Array.isArray(body.dashboardSectionOrder) ? body.dashboardSectionOrder : current.dashboardSectionOrder,
       };
       await savePreferences(this.ctx.storage, updated);
       return Response.json(updated);

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, animate, motion, useMotionValue, useTransform } from "motion/react";
 import { useNavStackContext } from "../components/nav-stack";
 import {
@@ -1408,15 +1408,31 @@ export default function DashboardPage({ userId }: DashboardPageProps) {
     />
   );
 
-  const carouselPages: CarouselPageDef[] = [
-    { id: "todos", label: "Todos", content: todoWidget },
-  ];
-  if (mailWidget) carouselPages.push({ id: "mail", label: "Mail", content: mailWidget });
-  carouselPages.push({ id: "projects", label: "Projects", content: projectsWidget });
-  if (!slack.loading && slack.threads.length > 0) {
-    carouselPages.push({ id: "slack", label: "Slack", content: <SlackWidget threads={slack.threads} /> });
-  }
-  carouselPages.push({ id: "chats", label: "Chats", content: <ChatsWidget conversations={conv.sortedActive} userId={userId} /> });
+  const slackWidget = !slack.loading && slack.threads.length > 0
+    ? <SlackWidget threads={slack.threads} />
+    : null;
+  const chatsWidget = <ChatsWidget conversations={conv.sortedActive} userId={userId} />;
+
+  const allSections: Record<string, { label: string; content: React.ReactNode | null }> = {
+    todos: { label: "Todos", content: todoWidget },
+    mail: { label: "Mail", content: mailWidget },
+    projects: { label: "Projects", content: projectsWidget },
+    slack: { label: "Slack", content: slackWidget },
+    chats: { label: "Chats", content: chatsWidget },
+  };
+
+  const savedOrder = todoState.preferences.dashboardSectionOrder;
+  const sectionOrder = savedOrder?.length
+    ? [...savedOrder, ...Object.keys(allSections).filter((id) => !savedOrder.includes(id))]
+    : ["todos", "mail", "projects", "slack", "chats"];
+
+  const carouselPages: CarouselPageDef[] = sectionOrder
+    .filter((id) => allSections[id]?.content != null)
+    .map((id) => ({ id, label: allSections[id].label, content: allSections[id].content! }));
+
+  const orderedDesktopWidgets = sectionOrder
+    .filter((id) => allSections[id]?.content != null)
+    .map((id) => <React.Fragment key={id}>{allSections[id].content}</React.Fragment>);
 
   return (
     <div className={cn("h-dvh bg-background-100 text-foreground-100", isMobile ? "flex flex-col" : "overflow-y-auto")}>
@@ -1453,11 +1469,7 @@ export default function DashboardPage({ userId }: DashboardPageProps) {
           transition={{ duration: 0.3, ease: "easeOut" }}
         >
           <div className="grid grid-cols-2 gap-2">
-            {todoWidget}
-            {mailWidget}
-            {projectsWidget}
-            {!slack.loading && <SlackWidget threads={slack.threads} />}
-            <ChatsWidget conversations={conv.sortedActive} userId={userId} />
+            {orderedDesktopWidgets}
             <UtilityRow />
           </div>
         </motion.main>
