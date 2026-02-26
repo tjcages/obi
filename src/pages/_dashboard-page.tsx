@@ -386,6 +386,12 @@ function TodoWidget({
   onSlackClick?: (slackRef: TodoItem["sourceSlack"]) => void;
 }) {
   const pending = useMemo(() => todos.filter((t) => t.status === "pending"), [todos]);
+  const completed = useMemo(
+    () => todos
+      .filter((t) => t.status === "completed")
+      .sort((a, b) => new Date(b.completedAt ?? 0).getTime() - new Date(a.completedAt ?? 0).getTime()),
+    [todos],
+  );
   const emailSuggestions = useMemo(
     () => todos.filter((t) => t.status === "suggested" && t.sourceEmails.length > 0),
     [todos],
@@ -393,6 +399,10 @@ function TodoWidget({
   const [visibleCount, setVisibleCount] = useState(6);
   const preview = pending.slice(0, visibleCount);
   const remaining = pending.length - visibleCount;
+  const [completedExpanded, setCompletedExpanded] = useState(false);
+  const [completedVisibleCount, setCompletedVisibleCount] = useState(6);
+  const completedPreview = completed.slice(0, completedVisibleCount);
+  const completedRemaining = completed.length - completedVisibleCount;
 
   const [adding, setAdding] = useState(false);
   const [newTitle, setNewTitle] = useState("");
@@ -529,7 +539,7 @@ function TodoWidget({
           ))}
         </AnimatePresence>
       </div>
-      {preview.length === 0 && (
+      {preview.length === 0 && completed.length === 0 && (
         <p className="py-4 text-center text-[13px] text-foreground-300/50">All clear</p>
       )}
 
@@ -543,6 +553,80 @@ function TodoWidget({
           See more ({remaining})
         </button>
       ) : null}
+
+      {/* Completed section */}
+      {completed.length > 0 && (
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={() => setCompletedExpanded((v) => !v)}
+            className="-ml-2 flex min-h-[44px] items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-foreground-300 transition-colors hover:bg-foreground-100/5 hover:text-foreground-200"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={cn(
+                "text-foreground-300/40 transition-transform duration-200",
+                completedExpanded && "rotate-90",
+              )}
+            >
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+            Completed
+            <span className="ml-0.5 text-[12px] font-normal text-foreground-300/50">
+              {completed.length}
+            </span>
+          </button>
+
+          <AnimatePresence initial={false}>
+            {completedExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+                className="overflow-hidden"
+              >
+                <div className="-mx-1">
+                  {completedPreview.map((todo) => (
+                    <TodoItemComponent
+                      key={todo.id}
+                      todo={todo}
+                      categories={categories}
+                      hideTodayBadge
+                      hideDate
+                      compactView
+                      onComplete={onComplete}
+                      onUncomplete={onUncomplete}
+                      onDelete={onDelete}
+                      onDateChange={onDateChange}
+                      onUpdate={onUpdate}
+                      onEmailClick={onEmailClick}
+                      onSlackClick={onSlackClick}
+                    />
+                  ))}
+                </div>
+                {completedRemaining > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setCompletedVisibleCount((c) => c + 6)}
+                    className="mt-1 flex min-h-[44px] w-full items-center justify-center gap-1 rounded-lg text-[13px] font-medium text-foreground-300 transition-colors hover:bg-foreground-100/5 hover:text-foreground-200"
+                  >
+                    See more ({completedRemaining})
+                  </button>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
     </div>
   );
 }
