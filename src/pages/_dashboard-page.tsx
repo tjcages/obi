@@ -931,16 +931,26 @@ function SlackWidget({ threads }: { threads: SlackThread[] }) {
         count={threads.length}
         countColor="bg-[#4A154B]"
       />
-      <ul className="space-y-1">
+      <ul className="space-y-2">
         {threads.slice(0, 3).map((t) => {
           const channel = t.channelName ? `#${t.channelName}` : "DM";
           const lastMsg = t.messages[t.messages.length - 1];
+          const participants = [...new Set(t.messages.map((m) => m.userName))];
           return (
-            <li key={`${t.channelId}:${t.threadTs}`} className="truncate">
-              <span className="text-[12px] font-medium text-foreground-200">{channel}</span>
-              <span className="ml-1.5 text-[12px] text-foreground-300/50 truncate">
-                {lastMsg?.text?.slice(0, 60) ?? ""}
-              </span>
+            <li key={`${t.channelId}:${t.threadTs}`} className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-medium text-foreground-100/60 shrink-0">{channel}</span>
+                <span className="text-foreground-100/15 text-[10px]">&middot;</span>
+                <span className="truncate text-[12px] text-foreground-200">
+                  {participants.join(", ")}
+                </span>
+                <span className="ml-auto shrink-0 text-[10px] text-foreground-300/40">
+                  {formatRelativeTime(t.receivedAt)}
+                </span>
+              </div>
+              <p className="mt-0.5 truncate text-[12px] leading-snug text-foreground-300/60">
+                {lastMsg?.text?.slice(0, 80) ?? ""}
+              </p>
             </li>
           );
         })}

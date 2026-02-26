@@ -98,7 +98,7 @@ export function SlackThreadModal({ open, thread, slackRef, onDismiss }: SlackThr
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
             onClick={onDismiss}
           />
           <motion.div
@@ -106,19 +106,19 @@ export function SlackThreadModal({ open, thread, slackRef, onDismiss }: SlackThr
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="fixed left-1/2 top-1/2 z-50 flex max-h-[80vh] w-full max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-border-100 bg-background-100 shadow-2xl"
+            className="fixed left-1/2 top-1/2 z-50 flex max-h-[80vh] w-full max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-border-100/40 bg-background-100 shadow-2xl"
           >
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-border-100 px-5 py-4">
+            <div className="flex items-center justify-between border-b border-border-100/50 px-5 py-3.5">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#4A154B]/10">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#4A154B]/10 dark:bg-[#E8B4E9]/10">
                   <SlackIcon className="h-4 w-4 text-[#4A154B] dark:text-[#E8B4E9]" />
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-foreground-100">{channelLabel}</div>
+                  <div className="text-[14px] font-semibold text-foreground-100">{channelLabel}</div>
                   {thread && (
-                    <div className="text-[11px] text-foreground-300">
-                      {[...new Set(messages.map(m => m.userName))].join(", ")} · {formatRelative(thread.receivedAt)}
+                    <div className="text-[11px] text-foreground-300/60">
+                      {[...new Set(messages.map(m => m.userName))].join(", ")} &middot; {formatRelative(thread.receivedAt)}
                     </div>
                   )}
                 </div>
@@ -126,9 +126,9 @@ export function SlackThreadModal({ open, thread, slackRef, onDismiss }: SlackThr
               <button
                 type="button"
                 onClick={onDismiss}
-                className="flex h-7 w-7 items-center justify-center rounded-lg text-foreground-300 transition-colors hover:bg-foreground-100/5 hover:text-foreground-200"
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-foreground-300/50 transition-colors hover:bg-foreground-100/5 hover:text-foreground-200"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
@@ -137,42 +137,43 @@ export function SlackThreadModal({ open, thread, slackRef, onDismiss }: SlackThr
 
             {/* Messages */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4">
-              <div className="space-y-4">
-                {messages.map((msg) => {
-                  const color = AVATAR_COLORS[hashStr(msg.userName) % AVATAR_COLORS.length];
-                  return (
-                    <div key={msg.ts} className="flex gap-3">
-                      <div
-                        className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
-                        style={{ backgroundColor: color }}
-                      >
-                        {msg.userName.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-sm font-semibold text-foreground-100">
-                            {msg.userName}
-                          </span>
-                          <span className="text-[11px] text-foreground-300">
-                            {formatSlackTs(msg.ts)}
-                          </span>
+              {messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <SlackIcon className="mb-3 h-8 w-8 text-foreground-300/20" />
+                  <p className="text-[14px] font-medium text-foreground-300/60">No messages</p>
+                  <p className="mt-0.5 text-[12px] text-foreground-300/40">This thread is empty</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {messages.map((msg) => {
+                    const color = AVATAR_COLORS[hashStr(msg.userName) % AVATAR_COLORS.length];
+                    return (
+                      <div key={msg.ts} className="flex gap-3">
+                        <div
+                          className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[11px] font-bold text-white"
+                          style={{ backgroundColor: color }}
+                        >
+                          {msg.userName.charAt(0).toUpperCase()}
                         </div>
-                        <p className="mt-0.5 whitespace-pre-wrap text-sm leading-relaxed text-foreground-100/80">
-                          {cleanSlackText(msg.text)}
-                        </p>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-[14px] font-semibold text-foreground-100">
+                              {msg.userName}
+                            </span>
+                            <span className="text-[11px] text-foreground-300/50">
+                              {formatSlackTs(msg.ts)}
+                            </span>
+                          </div>
+                          <p className="mt-0.5 whitespace-pre-wrap text-[14px] leading-relaxed text-foreground-100/80 select-text">
+                            {cleanSlackText(msg.text)}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-
-            {/* Footer */}
-            {messages.length === 0 && (
-              <div className="px-5 py-8 text-center text-sm text-foreground-300">
-                No messages in this thread
-              </div>
-            )}
           </motion.div>
         </>
       )}
