@@ -12,7 +12,7 @@ import {
   TagInput,
   Toggle,
 } from "../components/settings";
-import { NavStack, useNavStack } from "../components/nav-stack";
+import { NavStack, useNavStack, useNavStackContext } from "../components/nav-stack";
 import {
   ALL_AGENT_ACTIONS,
   cn,
@@ -180,6 +180,7 @@ function formatScanTime(iso: string): string {
 // ── Page ──
 
 export default function SettingsPage({ userId, embedded }: { userId: string; embedded?: boolean }) {
+  const outerNav = useNavStackContext();
   const [activeSection, setActiveSection] = useState("model");
   const [modelConfig, setModelConfig] = useState<ModelConfigResponse | null>(null);
   const [promptConfig, setPromptConfig] = useState<PromptConfig | null>(null);
@@ -685,6 +686,7 @@ export default function SettingsPage({ userId, embedded }: { userId: string; emb
             onSelect={selectSection}
             isMobile={true}
             embedded={embedded}
+            onBack={embedded ? outerNav?.pop : undefined}
           />
         </div>
       </NavStack>
@@ -734,6 +736,7 @@ function SettingsNav({
   onSelect,
   isMobile,
   embedded,
+  onBack,
 }: {
   activeSection: string;
   accounts: ConnectedAccountPublic[];
@@ -742,6 +745,7 @@ function SettingsNav({
   onSelect: (id: string) => void;
   isMobile: boolean;
   embedded?: boolean;
+  onBack?: () => void;
 }) {
   if (isMobile) {
     return (
@@ -752,17 +756,16 @@ function SettingsNav({
             Home
           </a>
         )}
-        {!embedded && (
-          <div className="mb-5">
-            <h1 className="text-[28px] font-bold tracking-tight text-foreground-100">Settings</h1>
-            <div className="mt-1 text-[15px] text-foreground-300/60">{displayName} &middot; {displayEmail}</div>
-          </div>
+        {embedded && onBack && (
+          <button type="button" onClick={onBack} className="-ml-3 mb-2 flex h-11 items-center gap-0 px-0 text-[17px] text-accent-100 transition-opacity active:opacity-50">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+            Back
+          </button>
         )}
-        {embedded && (
-          <div className="mb-4 mt-1">
-            <div className="text-[15px] text-foreground-300/60">{displayName} &middot; {displayEmail}</div>
-          </div>
-        )}
+        <div className="mb-5">
+          <h1 className="text-[28px] font-bold tracking-tight text-foreground-100">Settings</h1>
+          <div className="mt-1 text-[15px] text-foreground-300/60">{displayName} &middot; {displayEmail}</div>
+        </div>
         {NAV_GROUPS.map((group, gi) => (
           <div key={gi} className={cn(gi > 0 && "mt-5 border-t border-foreground-100/6 pt-5")}>
             {group.map((item) => (

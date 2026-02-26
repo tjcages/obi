@@ -376,7 +376,7 @@ const ProfileDropdown = forwardRef<HTMLDivElement, ProfileDropdownProps>(
           {navCtx ? (
             <button
               type="button"
-              onClick={() => navCtx.push("settings", { title: "Settings", variant: "cover" })}
+              onClick={() => navCtx.push("settings", { title: "Settings", variant: "fade" })}
               className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-foreground-200 transition-colors hover:bg-background-200 hover:text-foreground-100"
             >
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full">

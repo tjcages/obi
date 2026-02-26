@@ -75,7 +75,7 @@ export default function App({
           }}
         >
           {content}
-          <NavStack.Screen id="settings" title="Settings" scrollable={false} variant="cover">
+          <NavStack.Screen id="settings" title="Settings" scrollable={false} variant="fade" hideNavBar>
             <SettingsPage userId={userId} embedded />
           </NavStack.Screen>
           <NavStack.Screen id="todos" title="To-dos" scrollable={false} variant="fade" hideNavBar>
