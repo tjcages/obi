@@ -1130,10 +1130,12 @@ function DotIndicator({
   count,
   offsetX,
   pageWidth,
+  onSelectPage,
 }: {
   count: number;
   offsetX: ReturnType<typeof useMotionValue<number>>;
   pageWidth: number;
+  onSelectPage: (index: number) => void;
 }) {
   const progress = useTransform(offsetX, (ox) => {
     if (pageWidth === 0) return 0;
@@ -1141,9 +1143,9 @@ function DotIndicator({
   });
 
   return (
-    <div className="pointer-events-none absolute bottom-3 left-0 right-0 flex items-center justify-center gap-2">
+    <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-2">
       {Array.from({ length: count }, (_, i) => (
-        <CarouselDot key={i} index={i} progress={progress} />
+        <CarouselDot key={i} index={i} progress={progress} onTap={() => onSelectPage(i)} />
       ))}
     </div>
   );
@@ -1152,9 +1154,11 @@ function DotIndicator({
 function CarouselDot({
   index,
   progress,
+  onTap,
 }: {
   index: number;
   progress: ReturnType<typeof useTransform<number, number>>;
+  onTap: () => void;
 }) {
   const width = useTransform(progress, (p) => {
     const dist = Math.abs(p - index);
@@ -1167,7 +1171,9 @@ function CarouselDot({
   });
 
   return (
-    <motion.div
+    <motion.button
+      type="button"
+      onClick={onTap}
       className="h-[6px] rounded-full bg-foreground-100/20 backdrop-blur-md"
       style={{ width, opacity }}
     />
@@ -1226,10 +1232,40 @@ function CarouselPageWrapper({
   );
 }
 
+function SectionTabs({
+  pages,
+  currentPage,
+  onSelectPage,
+}: {
+  pages: CarouselPageDef[];
+  currentPage: number;
+  onSelectPage: (index: number) => void;
+}) {
+  return (
+    <div className="flex items-center gap-1 overflow-x-auto px-4 pb-2 scrollbar-none">
+      {pages.map((page, i) => (
+        <button
+          key={page.id}
+          type="button"
+          onClick={() => onSelectPage(i)}
+          className={cn(
+            "shrink-0 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors",
+            i === currentPage
+              ? "bg-foreground-100/10 text-foreground-100"
+              : "text-foreground-300/50 active:bg-foreground-100/5",
+          )}
+        >
+          {page.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function WidgetCarousel({ pages }: { pages: CarouselPageDef[] }) {
   const offsetX = useMotionValue(0);
   const currentPageRef = useRef(0);
-  const [currentPageLabel, setCurrentPageLabel] = useState(pages[0]?.label ?? "");
+  const [currentPage, setCurrentPage] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const pageWidthRef = useRef(0);
   const [pageWidth, setPageWidth] = useState(0);
@@ -1248,127 +1284,27 @@ function WidgetCarousel({ pages }: { pages: CarouselPageDef[] }) {
     return () => window.removeEventListener("resize", measure);
   }, []);
 
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el || pages.length <= 1) return;
-
-    let startX = 0;
-    let startY = 0;
-    let decided = false;
-    let isHorizontal = false;
-    let startOffset = 0;
-    let lastDx = 0;
-    let lastTime = 0;
-    let velocityX = 0;
-
-    const onTouchStart = (e: TouchEvent) => {
-      const touch = e.touches[0];
-      startX = touch.clientX;
-      startY = touch.clientY;
-      decided = false;
-      isHorizontal = false;
-      lastDx = 0;
-      lastTime = Date.now();
-      velocityX = 0;
-      startOffset = offsetX.get();
-      animate(offsetX, startOffset, { duration: 0 });
-    };
-
-    const onTouchMove = (e: TouchEvent) => {
-      const touch = e.touches[0];
-      const dx = touch.clientX - startX;
-      const dy = touch.clientY - startY;
-
-      if (!decided) {
-        if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
-          decided = true;
-          isHorizontal = Math.abs(dx) > Math.abs(dy);
-          if (!isHorizontal) return;
-        } else {
-          return;
-        }
-      }
-
-      if (!isHorizontal) return;
-      e.preventDefault();
-
-      const now = Date.now();
-      const dt = now - lastTime;
-      if (dt > 0) velocityX = ((dx - lastDx) / dt) * 1000;
-      lastDx = dx;
-      lastTime = now;
-
-      const pw = pageWidthRef.current;
-      const maxOffset = 0;
-      const minOffset = -((pages.length - 1) * pw);
-      let newOffset = startOffset + dx;
-
-      if (newOffset > maxOffset) {
-        newOffset = maxOffset + (newOffset - maxOffset) * 0.25;
-      } else if (newOffset < minOffset) {
-        newOffset = minOffset + (newOffset - minOffset) * 0.25;
-      }
-
-      offsetX.set(newOffset);
-    };
-
-    const onTouchEnd = () => {
-      if (!decided || !isHorizontal) return;
-      const pw = pageWidthRef.current;
-      if (pw === 0) return;
-
-      const current = offsetX.get();
-      const rawPage = -current / pw;
-      let targetPage = currentPageRef.current;
-
-      if (Math.abs(velocityX) > 500) {
-        targetPage = velocityX < 0
-          ? Math.min(currentPageRef.current + 1, pages.length - 1)
-          : Math.max(currentPageRef.current - 1, 0);
-      } else {
-        targetPage = Math.round(rawPage);
-        targetPage = Math.max(0, Math.min(targetPage, pages.length - 1));
-      }
-
-      currentPageRef.current = targetPage;
-      setCurrentPageLabel(pages[targetPage]?.label ?? "");
-      animate(offsetX, -(targetPage * pw), {
-        type: "spring",
-        stiffness: 300,
-        damping: 35,
-      });
-    };
-
-    el.addEventListener("touchstart", onTouchStart, { passive: true });
-    el.addEventListener("touchmove", onTouchMove, { passive: false });
-    el.addEventListener("touchend", onTouchEnd, { passive: true });
-
-    return () => {
-      el.removeEventListener("touchstart", onTouchStart);
-      el.removeEventListener("touchmove", onTouchMove);
-      el.removeEventListener("touchend", onTouchEnd);
-    };
+  const navigateToPage = useCallback((index: number) => {
+    const clamped = Math.max(0, Math.min(index, pages.length - 1));
+    currentPageRef.current = clamped;
+    setCurrentPage(clamped);
+    animate(offsetX, -(clamped * pageWidthRef.current), {
+      type: "spring",
+      stiffness: 300,
+      damping: 35,
+    });
   }, [pages.length, offsetX]);
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
-      {/* Page label */}
-      <div className="px-4 pb-1">
-        <AnimatePresence mode="wait">
-          <motion.span
-            key={currentPageLabel}
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.15 }}
-            className="block text-[11px] font-medium uppercase tracking-widest text-foreground-300/50"
-          >
-            {currentPageLabel}
-          </motion.span>
-        </AnimatePresence>
-      </div>
+      {/* Tappable section tabs */}
+      <SectionTabs
+        pages={pages}
+        currentPage={currentPage}
+        onSelectPage={navigateToPage}
+      />
 
-      {/* Carousel track */}
+      {/* Carousel track — no swipe gestures, only tap navigation */}
       <div ref={containerRef} className="relative min-h-0 flex-1 overflow-hidden">
         <motion.div
           className="flex h-full"
@@ -1386,11 +1322,12 @@ function WidgetCarousel({ pages }: { pages: CarouselPageDef[] }) {
         </motion.div>
       </div>
 
-      {/* Dot indicators */}
+      {/* Tappable dot indicators */}
       <DotIndicator
         count={pages.length}
         offsetX={offsetX}
         pageWidth={pageWidth}
+        onSelectPage={navigateToPage}
       />
     </div>
   );
