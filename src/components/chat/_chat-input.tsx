@@ -1,4 +1,5 @@
 import { useRef, useLayoutEffect, useCallback } from "react";
+import { ArrowUp } from "@phosphor-icons/react";
 import { cn, useIsMobile } from "../../lib";
 
 const MAX_ROWS = 6;
@@ -8,8 +9,8 @@ const MIN_HEIGHT = LINE_HEIGHT + PADDING_Y;
 const MIN_HEIGHT_MOBILE = LINE_HEIGHT * 2 + PADDING_Y;
 const MAX_HEIGHT = LINE_HEIGHT * MAX_ROWS + PADDING_Y;
 
-const RING_SIZE = 24;
-const RING_STROKE = 2.5;
+const RING_SIZE = 22;
+const RING_STROKE = 2;
 const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
@@ -20,7 +21,7 @@ function ContextProgressRing({ percent }: { percent: number }) {
       ? "stroke-red-400"
       : percent > 60
         ? "stroke-amber-400"
-        : "stroke-foreground-300";
+        : "stroke-foreground-300/60";
 
   if (percent < 1) return null;
 
@@ -97,36 +98,42 @@ export function ChatInput({
   };
 
   return (
-    <form
-      className="flex shrink-0 items-end gap-2.5 border-t border-border-100 px-4 py-3"
-      onSubmit={onSubmit}
-    >
-      <textarea
-        ref={textareaRef}
-        value={input}
-        onChange={onChange}
-        onKeyDown={handleKeyDown}
-        placeholder="Ask about your inbox..."
-        disabled={disabled}
-        rows={1}
-        aria-label="Chat message"
-        className="flex-1 resize-none rounded-xl border border-border-100 bg-background-200 px-4 py-3 text-[15px] leading-[24px] text-foreground-100 outline-none transition-[height,border-color] duration-150 ease-out placeholder:text-foreground-300 focus:border-accent-100 disabled:opacity-50"
-        style={{ minHeight: minH, maxHeight: MAX_HEIGHT }}
-      />
-      <div className="mb-0.5 flex items-center gap-2.5">
-        <ContextProgressRing percent={boundedPercent} />
-        <button
-          type="submit"
-          disabled={!canSend}
-          aria-label="Send"
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-accent-100 text-white transition-colors hover:bg-accent-100/90 disabled:cursor-not-allowed disabled:bg-background-300 disabled:text-foreground-300"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="19" x2="12" y2="5" />
-            <polyline points="5 12 12 5 19 12" />
-          </svg>
-        </button>
-      </div>
-    </form>
+    <div className="shrink-0 border-t border-border-100/60 px-4 py-3">
+      <form
+        className="flex items-end gap-2"
+        onSubmit={onSubmit}
+      >
+        <div className="flex min-w-0 flex-1 items-end rounded-2xl border border-border-100/80 bg-background-200/80 transition-all focus-within:border-foreground-300/40 focus-within:bg-background-100 focus-within:shadow-lg">
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={onChange}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask about your inbox..."
+            disabled={disabled}
+            rows={1}
+            aria-label="Chat message"
+            className="flex-1 resize-none bg-transparent py-3 pl-4 pr-2 text-[15px] leading-[24px] text-foreground-100 outline-none placeholder:text-foreground-300/50 disabled:opacity-40"
+            style={{ minHeight: minH, maxHeight: MAX_HEIGHT }}
+          />
+          <div className="flex shrink-0 items-center gap-1.5 pb-2 pr-2">
+            <ContextProgressRing percent={boundedPercent} />
+            <button
+              type="submit"
+              disabled={!canSend}
+              aria-label="Send"
+              className={cn(
+                "flex h-8 w-8 items-center justify-center rounded-xl transition-all",
+                canSend
+                  ? "bg-foreground-100 text-background-100 hover:bg-foreground-100/90"
+                  : "bg-foreground-100/8 text-foreground-300/50",
+              )}
+            >
+              <ArrowUp size={16} weight="bold" />
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
   );
 }
