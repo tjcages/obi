@@ -54,6 +54,20 @@ function NavStackScreen(_: NavStackScreenProps) {
   return null;
 }
 
+// ── Helpers ──
+
+function findScrollableParent(target: EventTarget | null, container: HTMLElement): HTMLElement | null {
+  let el = target as HTMLElement | null;
+  while (el && el !== container) {
+    const { overflowY } = window.getComputedStyle(el);
+    if ((overflowY === "auto" || overflowY === "scroll") && el.scrollHeight > el.clientHeight) {
+      return el;
+    }
+    el = el.parentElement;
+  }
+  return null;
+}
+
 // ── Main component ──
 
 interface NavStackProps {
@@ -150,8 +164,6 @@ function NavStackComponent({
   };
 
   const resolveHideNavBar = (entry: NavStackEntry): boolean => {
-    const variant = resolveVariant(entry);
-    if (variant === "cover") return true;
     return entry.hideNavBar === true || screens.get(entry.id)?.hideNavBar === true;
   };
 
@@ -341,47 +353,73 @@ function NavStackComponent({
     };
   }, [isOverlayVisible, currentVariant, contentX, edgeWidth, swipeThreshold, velocityThreshold, nav]);
 
-  // ── Cover: swipe-down to dismiss ──
+  // ── Cover: swipe-down to dismiss (Vaul-style) ──
+  //
+  // Instead of checking scrollTop at touchstart on a fixed element, we walk
+  // the DOM from the touch target to find the nearest scrollable ancestor.
+  // Dismiss drag only begins when that element is scrolled to the top AND
+  // the user is pulling downward — exactly how Vaul's drawer works.
 
   useEffect(() => {
     if (!isOverlayVisible || currentVariant !== "cover") return;
     const el = contentRef.current;
     if (!el) return;
 
-    let active = false;
+    let touchActive = false;
+    let dragging = false;
+    let scrollTarget: HTMLElement | null = null;
+    let scrollLocked = false;
     let startY = 0;
     let startX = 0;
-    let decided = false;
-    let lastDy = 0;
+    let directionDecided = false;
+    let dragOffset = 0;
+    let lastDragDy = 0;
     let lastTime = 0;
     let vy = 0;
 
-    const onTouchStart = (e: TouchEvent) => {
-      const scrollEl = el.querySelector("[data-cover-scroll]") as HTMLElement | null;
-      const scrollTop = scrollEl ? scrollEl.scrollTop : 0;
-      if (scrollTop > 0) return;
+    const lockScrollTarget = () => {
+      if (scrollTarget && !scrollLocked) {
+        scrollTarget.style.overflowY = "hidden";
+        scrollLocked = true;
+      }
+    };
 
+    const unlockScrollTarget = () => {
+      if (scrollTarget && scrollLocked) {
+        scrollTarget.style.overflowY = "";
+        scrollLocked = false;
+      }
+    };
+
+    const onTouchStart = (e: TouchEvent) => {
       const touch = e.touches[0];
       startY = touch.clientY;
       startX = touch.clientX;
-      active = true;
-      decided = false;
-      lastDy = 0;
+      touchActive = true;
+      dragging = false;
+      directionDecided = false;
+      dragOffset = 0;
+      lastDragDy = 0;
       lastTime = Date.now();
       vy = 0;
+      scrollTarget = findScrollableParent(e.target, el);
     };
 
     const onTouchMove = (e: TouchEvent) => {
-      if (!active) return;
+      if (!touchActive) return;
       const touch = e.touches[0];
-      const dy = touch.clientY - startY;
-      const dx = touch.clientX - startX;
+      const totalDy = touch.clientY - startY;
+      const totalDx = touch.clientX - startX;
 
-      if (!decided) {
-        if (Math.abs(dy) > 10 || Math.abs(dx) > 10) {
-          decided = true;
-          if (Math.abs(dx) > Math.abs(dy) || dy < 0) {
-            active = false;
+      if (!directionDecided) {
+        if (Math.abs(totalDy) > 8 || Math.abs(totalDx) > 8) {
+          directionDecided = true;
+          if (Math.abs(totalDx) > Math.abs(totalDy)) {
+            touchActive = false;
+            return;
+          }
+          if (totalDy < 0) {
+            touchActive = false;
             return;
           }
         } else {
@@ -389,20 +427,48 @@ function NavStackComponent({
         }
       }
 
-      e.preventDefault();
-      const now = Date.now();
-      const dt = now - lastTime;
-      if (dt > 0) vy = ((dy - lastDy) / dt) * 1000;
-      lastDy = dy;
-      lastTime = now;
-      contentY.set(Math.max(0, dy));
+      if (dragging) {
+        e.preventDefault();
+        const dragDy = touch.clientY - dragOffset;
+        const now = Date.now();
+        const dt = now - lastTime;
+        if (dt > 0) vy = ((dragDy - lastDragDy) / dt) * 1000;
+        lastDragDy = dragDy;
+        lastTime = now;
+
+        if (dragDy <= 0) {
+          contentY.set(0);
+          dragging = false;
+          unlockScrollTarget();
+          return;
+        }
+
+        contentY.set(Math.max(0, dragDy));
+        return;
+      }
+
+      const scrollTop = scrollTarget ? scrollTarget.scrollTop : 0;
+
+      if (scrollTop <= 1 && totalDy > 0) {
+        dragging = true;
+        dragOffset = touch.clientY;
+        lastDragDy = 0;
+        lastTime = Date.now();
+        vy = 0;
+        lockScrollTarget();
+        e.preventDefault();
+        return;
+      }
     };
 
     const onTouchEnd = () => {
-      if (!active || !decided) {
-        active = false;
+      unlockScrollTarget();
+
+      if (!dragging) {
+        touchActive = false;
         return;
       }
+
       const current = contentY.get();
       const sh = window.innerHeight;
       if (current > sh * 0.2 || vy > 500) {
@@ -420,7 +486,8 @@ function NavStackComponent({
       } else {
         animate(contentY, 0, { type: "spring", stiffness: 500, damping: 50 });
       }
-      active = false;
+      touchActive = false;
+      dragging = false;
     };
 
     el.addEventListener("touchstart", onTouchStart, { passive: true });
@@ -434,7 +501,7 @@ function NavStackComponent({
     };
   }, [isOverlayVisible, currentVariant, contentY, nav]);
 
-  // ── Default nav bar (slide only) ──
+  // ── Default nav bar ──
 
   const renderDefaultNavBar = (
     entry: NavStackEntry,
@@ -512,7 +579,7 @@ function NavStackComponent({
                 : "0 -4px 32px rgba(0,0,0,0.15)",
             }}
           >
-            {/* Slide: nav bar */}
+            {/* Nav bar */}
             {!resolveHideNavBar(visibleEntry) && (renderNavBar
               ? renderNavBar(visibleEntry, {
                   pop: animatedPop,
@@ -523,13 +590,6 @@ function NavStackComponent({
                   prevTitle: resolveBackLabel(visibleEntry),
                 }))}
 
-            {/* Cover: grabber handle */}
-            {currentVariant === "cover" && (
-              <div className="flex shrink-0 justify-center py-2">
-                <div className="h-[5px] w-9 rounded-full bg-foreground-100/15" />
-              </div>
-            )}
-
             {/* Content */}
             <div
               className={cn(
@@ -537,7 +597,6 @@ function NavStackComponent({
                 resolveScrollable(visibleEntry) ? "overflow-y-auto" : "overflow-hidden",
                 resolveScreenClassName(visibleEntry),
               )}
-              data-cover-scroll={currentVariant === "cover" ? "" : undefined}
             >
               {resolveContent(visibleEntry)}
             </div>
