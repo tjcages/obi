@@ -169,7 +169,7 @@ function renderInlineMarkdown(text: string): ReactNode {
   return <>{parts}</>;
 }
 
-function renderMarkdownText(text: string): ReactNode {
+export function renderMarkdownText(text: string): ReactNode {
   const lines = text.split("\n");
   const elements: ReactNode[] = [];
   let i = 0;
