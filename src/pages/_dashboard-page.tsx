@@ -1047,7 +1047,7 @@ function DotIndicator({
   });
 
   return (
-    <div className="flex items-center justify-center gap-1.5 py-3">
+    <div className="pointer-events-none absolute bottom-3 left-0 right-0 flex items-center justify-center gap-2">
       {Array.from({ length: count }, (_, i) => (
         <CarouselDot key={i} index={i} progress={progress} />
       ))}
@@ -1074,7 +1074,7 @@ function CarouselDot({
 
   return (
     <motion.div
-      className="h-[6px] rounded-full bg-foreground-100"
+      className="h-[6px] rounded-full bg-foreground-100/20 backdrop-blur-md"
       style={{ width, opacity }}
     />
   );
@@ -1257,7 +1257,7 @@ function WidgetCarousel({ pages }: { pages: CarouselPageDef[] }) {
   }, [pages.length, offsetX]);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="relative flex min-h-0 flex-1 flex-col">
       {/* Page label */}
       <div className="px-4 pb-1">
         <AnimatePresence mode="wait">
