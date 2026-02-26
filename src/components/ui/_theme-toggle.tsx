@@ -16,8 +16,10 @@ function applyTheme(pref: ThemePreference) {
   const resolved = resolveTheme(pref);
   document.documentElement.dataset.theme = resolved;
   document.documentElement.dataset.mode = resolved;
-  document.documentElement.style.backgroundColor = resolved === "dark" ? "#141414" : "#ffffff";
+  const bg = resolved === "dark" ? "#141414" : "#ffffff";
+  document.documentElement.style.backgroundColor = bg;
   document.querySelector('meta[name="color-scheme"]')?.setAttribute("content", resolved);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", bg);
 }
 
 export function subscribeTheme(cb: () => void) {

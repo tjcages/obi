@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 
-export type NavStackVariant = "slide" | "cover";
+export type NavStackVariant = "slide" | "cover" | "fade";
 
 export interface NavStackEntry {
   id: string;

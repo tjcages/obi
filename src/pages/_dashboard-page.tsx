@@ -153,7 +153,7 @@ function useNavLink(href: string, title?: string) {
   if (!navCtx) return { href, onClick: undefined };
 
   let screenId = href;
-  const variant: "slide" | "cover" = "cover";
+  let variant: "slide" | "cover" | "fade" = "fade";
   if (href === "/todos" || href.startsWith("/todos?")) screenId = "todos";
   else if (href === "/inbox") screenId = "inbox";
   else if (href === "/projects") screenId = "projects";
@@ -161,7 +161,7 @@ function useNavLink(href: string, title?: string) {
     const name = decodeURIComponent(href.replace(/^\/projects\//, ""));
     screenId = `project:${name}`;
   }
-  else if (href === "/settings") screenId = "settings";
+  else if (href === "/settings") { screenId = "settings"; variant = "cover"; }
   else return { href, onClick: undefined };
 
   return {

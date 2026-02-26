@@ -78,13 +78,13 @@ export default function App({
           <NavStack.Screen id="settings" title="Settings" scrollable={false} variant="cover">
             <SettingsPage userId={userId} embedded />
           </NavStack.Screen>
-          <NavStack.Screen id="todos" title="To-dos" scrollable={false} variant="cover" hideNavBar>
+          <NavStack.Screen id="todos" title="To-dos" scrollable={false} variant="fade" hideNavBar>
             <TodoPage userId={userId} />
           </NavStack.Screen>
-          <NavStack.Screen id="inbox" title="Mail" scrollable={false} variant="cover" hideNavBar>
+          <NavStack.Screen id="inbox" title="Mail" variant="fade">
             <InboxPage userId={userId} />
           </NavStack.Screen>
-          <NavStack.Screen id="projects" title="Projects" scrollable={false} variant="cover" hideNavBar>
+          <NavStack.Screen id="projects" title="Projects" variant="fade">
             <ProjectsPage userId={userId} />
           </NavStack.Screen>
         </NavStack>

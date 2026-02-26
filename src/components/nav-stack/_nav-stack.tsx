@@ -68,6 +68,20 @@ function findScrollableParent(target: EventTarget | null, container: HTMLElement
   return null;
 }
 
+function getOrCreateThemeColorMeta(): HTMLMetaElement {
+  let meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
+  if (!meta) {
+    meta = document.createElement("meta");
+    meta.name = "theme-color";
+    document.head.appendChild(meta);
+  }
+  return meta;
+}
+
+function getBaseThemeColor(): string {
+  return document.documentElement.dataset.theme === "dark" ? "#141414" : "#ffffff";
+}
+
 // ── Main component ──
 
 interface NavStackProps {
@@ -203,8 +217,71 @@ function NavStackComponent({
     return 0.35 * Math.max(0, Math.min(1, 1 - v / sh));
   });
 
+  // ── Fade animation values ──
+
+  const fadeProgress = useMotionValue(0);
+  const rootFadeOpacity = useTransform(fadeProgress, [0, 1], [1, 0]);
+  const contentFadeOpacity = useTransform(fadeProgress, [0, 1], [0, 1]);
+
+  const fadeScrollRef = useRef<HTMLDivElement>(null);
+  const fadeCompactTitleRef = useRef<HTMLSpanElement>(null);
+  const fadeCompactBarRef = useRef<HTMLDivElement>(null);
+
   // Current variant
   const currentVariant = visibleEntry ? resolveVariant(visibleEntry) : "slide";
+
+  // ── Theme-color meta animation for cover ──
+
+  useEffect(() => {
+    if (!isOverlayVisible || currentVariant !== "cover") return;
+    const meta = getOrCreateThemeColorMeta();
+    const baseColor = getBaseThemeColor();
+    const base = [
+      parseInt(baseColor.slice(1, 3), 16),
+      parseInt(baseColor.slice(3, 5), 16),
+      parseInt(baseColor.slice(5, 7), 16),
+    ];
+
+    const unsub = contentY.on("change", (v) => {
+      const sh = window.innerHeight;
+      const progress = Math.max(0, Math.min(1, 1 - v / sh));
+      const r = Math.round(base[0] * (1 - 0.35 * progress));
+      const g = Math.round(base[1] * (1 - 0.35 * progress));
+      const b = Math.round(base[2] * (1 - 0.35 * progress));
+      meta.content = `rgb(${r},${g},${b})`;
+    });
+
+    return () => {
+      unsub();
+      meta.content = getBaseThemeColor();
+    };
+  }, [isOverlayVisible, currentVariant, contentY]);
+
+  // ── Fade large-title scroll tracking ──
+
+  useEffect(() => {
+    if (!isOverlayVisible || currentVariant !== "fade") return;
+    const scrollEl = fadeScrollRef.current;
+    if (!scrollEl) return;
+
+    const onScroll = () => {
+      const y = scrollEl.scrollTop;
+      const titleOpacity = Math.min(1, Math.max(0, (y - 24) / 20));
+      const showBorder = y > 44;
+
+      if (fadeCompactTitleRef.current) {
+        fadeCompactTitleRef.current.style.opacity = String(titleOpacity);
+      }
+      if (fadeCompactBarRef.current) {
+        fadeCompactBarRef.current.style.borderBottomColor = showBorder
+          ? "var(--color-border-100)"
+          : "transparent";
+      }
+    };
+
+    scrollEl.addEventListener("scroll", onScroll, { passive: true });
+    return () => scrollEl.removeEventListener("scroll", onScroll);
+  }, [isOverlayVisible, currentVariant]);
 
   // ── Push animation ──
 
@@ -223,6 +300,11 @@ function NavStackComponent({
         requestAnimationFrame(() => {
           animate(contentY, 0, { type: "spring", stiffness: 300, damping: 34 });
         });
+      } else if (variant === "fade") {
+        fadeProgress.set(0);
+        requestAnimationFrame(() => {
+          animate(fadeProgress, 1, { duration: 0.3, ease: [0.32, 0.72, 0, 1] });
+        });
       } else {
         contentX.set(window.innerWidth);
         requestAnimationFrame(() => {
@@ -230,7 +312,7 @@ function NavStackComponent({
         });
       }
     }
-  }, [nav.stack.length, contentX, contentY, resolveVariant]);
+  }, [nav.stack.length, contentX, contentY, fadeProgress, resolveVariant]);
 
   // ── Animated pop ──
 
@@ -250,6 +332,12 @@ function NavStackComponent({
         nav.pop();
         contentY.set(0);
       });
+    } else if (variant === "fade") {
+      animate(fadeProgress, 0, { duration: 0.25, ease: [0.32, 0.72, 0, 1] }).then(() => {
+        setExitingEntry(null);
+        nav.pop();
+        fadeProgress.set(0);
+      });
     } else {
       animate(contentX, window.innerWidth, {
         type: "spring",
@@ -260,7 +348,7 @@ function NavStackComponent({
         nav.pop();
       });
     }
-  }, [nav, contentX, contentY, resolveVariant]);
+  }, [nav, contentX, contentY, fadeProgress, resolveVariant]);
 
   // ── Slide: swipe-back from left edge ──
 
@@ -541,19 +629,23 @@ function NavStackComponent({
       <div className={cn("relative overflow-hidden", className)}>
         {/* Root layer */}
         <motion.div
-          className={cn("h-full overflow-y-auto", currentVariant === "cover" && isOverlayVisible && "pointer-events-none")}
+          className={cn(
+            "h-full overflow-y-auto",
+            (currentVariant === "cover" || currentVariant === "fade") && isOverlayVisible && "pointer-events-none",
+          )}
           style={{
             x: currentVariant === "slide" && isOverlayVisible ? navTranslateX : undefined,
             scale: currentVariant === "cover" && isOverlayVisible ? rootScale : undefined,
             borderRadius: currentVariant === "cover" && isOverlayVisible ? rootBorderRadius : undefined,
+            opacity: currentVariant === "fade" && isOverlayVisible ? rootFadeOpacity : undefined,
             transformOrigin: "top center",
           }}
         >
           {rootContent}
         </motion.div>
 
-        {/* Dimming overlay */}
-        {isOverlayVisible && (
+        {/* Dimming overlay (slide & cover only) */}
+        {isOverlayVisible && currentVariant !== "fade" && (
           <motion.div
             className="pointer-events-none absolute inset-0 bg-black"
             style={{
@@ -562,8 +654,8 @@ function NavStackComponent({
           />
         )}
 
-        {/* Content panel */}
-        {isOverlayVisible && visibleEntry && (
+        {/* Content panel — slide & cover */}
+        {isOverlayVisible && visibleEntry && currentVariant !== "fade" && (
           <motion.div
             ref={contentRef}
             className={cn(
@@ -600,6 +692,75 @@ function NavStackComponent({
             >
               {resolveContent(visibleEntry)}
             </div>
+          </motion.div>
+        )}
+
+        {/* Content panel — fade */}
+        {isOverlayVisible && visibleEntry && currentVariant === "fade" && (
+          <motion.div
+            className="absolute inset-0 overflow-hidden bg-background-100"
+            style={{ opacity: contentFadeOpacity }}
+          >
+            {resolveHideNavBar(visibleEntry) ? (
+              <div
+                className={cn(
+                  "h-full",
+                  resolveScrollable(visibleEntry) ? "overflow-y-auto" : "overflow-hidden",
+                  resolveScreenClassName(visibleEntry),
+                )}
+              >
+                {resolveContent(visibleEntry)}
+              </div>
+            ) : (
+              <>
+                {/* Fixed compact bar */}
+                <div
+                  ref={fadeCompactBarRef}
+                  className="absolute inset-x-0 top-0 z-10 flex h-11 shrink-0 items-center border-b border-transparent bg-background-100/80 px-1 backdrop-blur-xl"
+                >
+                  <button
+                    type="button"
+                    onClick={animatedPop}
+                    className="relative z-10 flex shrink-0 items-center gap-0 pr-3 text-[17px] text-accent-100 transition-opacity active:opacity-50"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="22"
+                      height="22"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M15 18l-6-6 6-6" />
+                    </svg>
+                    {resolveBackLabel(visibleEntry)}
+                  </button>
+                  <span
+                    ref={fadeCompactTitleRef}
+                    className="pointer-events-none absolute inset-x-24 truncate text-center text-[17px] font-semibold text-foreground-100"
+                    style={{ opacity: 0 }}
+                  >
+                    {resolveTitle(visibleEntry)}
+                  </span>
+                </div>
+
+                {/* Scrollable content with large title */}
+                <div
+                  ref={fadeScrollRef}
+                  className={cn("h-full overflow-y-auto", resolveScreenClassName(visibleEntry))}
+                >
+                  <div className="px-4 pb-1 pt-[50px]">
+                    <h1 className="text-[28px] font-bold leading-tight tracking-tight text-foreground-100">
+                      {resolveTitle(visibleEntry)}
+                    </h1>
+                  </div>
+                  {resolveContent(visibleEntry)}
+                </div>
+              </>
+            )}
           </motion.div>
         )}
       </div>

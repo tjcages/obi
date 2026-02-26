@@ -96,22 +96,10 @@ export default function InboxPage({ userId }: InboxPageProps) {
   const emailModalOpen = !!selectedThreadId;
 
   return (
-    <div className={cn("overflow-y-auto bg-background-100 text-foreground-100", navCtx ? "h-full" : "h-dvh")}>
-      {/* Header */}
-      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border-100/60 bg-background-100/80 px-4 py-2.5 backdrop-blur-lg lg:px-5 lg:py-3">
-        <div className="flex items-center gap-2">
-          {navCtx ? (
-            <button
-              type="button"
-              onClick={() => navCtx.pop()}
-              className="-ml-2 flex items-center gap-1.5 rounded-lg px-2 py-2 text-sm text-foreground-300 transition-colors hover:bg-foreground-100/5 hover:text-foreground-100"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="15 18 9 12 15 6" />
-              </svg>
-              Dashboard
-            </button>
-          ) : (
+    <div className={cn("bg-background-100 text-foreground-100", !navCtx && "h-dvh overflow-y-auto")}>
+      {!navCtx && (
+        <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border-100/60 bg-background-100/80 px-4 py-2.5 backdrop-blur-lg lg:px-5 lg:py-3">
+          <div className="flex items-center gap-2">
             <a
               href="/"
               className="-ml-2 flex items-center gap-1.5 rounded-lg px-2 py-2 text-sm text-foreground-300 transition-colors hover:bg-foreground-100/5 hover:text-foreground-100"
@@ -121,11 +109,11 @@ export default function InboxPage({ userId }: InboxPageProps) {
               </svg>
               Dashboard
             </a>
-          )}
-        </div>
-        <h1 className="text-sm font-semibold text-foreground-100">Inbox</h1>
-        <div className="w-20" />
-      </header>
+          </div>
+          <h1 className="text-sm font-semibold text-foreground-100">Inbox</h1>
+          <div className="w-20" />
+        </header>
+      )}
 
       <div className="mx-auto max-w-2xl px-1.5 py-4 sm:px-2.5">
         {accounts.accounts.length > 1 && (
