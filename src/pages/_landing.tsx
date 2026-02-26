@@ -63,7 +63,7 @@ const FEATURES = [
   {
     icon: CheckSquare,
     title: "Todos from your email",
-    desc: "AI scans your inbox and suggests action items. Organize them by category, date, and priority.",
+    desc: "AI scans your inbox and suggests action items. Organize them by project, date, and priority.",
     color: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400",
   },
   {

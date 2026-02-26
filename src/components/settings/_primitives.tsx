@@ -6,33 +6,46 @@ export function SettingsRow({
   desc,
   children,
   stacked,
+  onClick,
 }: {
   label: string;
   desc?: string;
   children: React.ReactNode;
-  /** Force label and control to stack vertically (auto on mobile). */
   stacked?: boolean;
+  onClick?: () => void;
 }) {
-  return (
-    <div
-      className={cn(
-        "gap-4 px-4 py-3.5 lg:gap-6 lg:px-5 lg:py-[14px]",
-        stacked
-          ? "flex flex-col items-start"
-          : "flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between",
-      )}
-    >
+  const content = (
+    <>
       <div className="min-w-0 flex-1">
-        <div className="text-sm font-medium text-foreground-100 lg:text-[13.5px]">{label}</div>
+        <div className="text-[15px] font-normal text-foreground-100 lg:text-[13.5px] lg:font-medium">{label}</div>
         {desc && (
           <div className="mt-0.5 text-[13px] leading-snug text-foreground-300 lg:text-[12.5px]">
             {desc}
           </div>
         )}
       </div>
-      <div className="shrink-0">{children}</div>
-    </div>
+      <div className={cn("shrink-0", onClick && "pointer-events-none")}>{children}</div>
+    </>
   );
+
+  const rowClass = cn(
+    "min-h-[44px] px-4 py-3 lg:min-h-0 lg:px-5 lg:py-[14px]",
+    onClick
+      ? "flex w-full items-center justify-between gap-4 text-left transition-colors active:bg-foreground-100/5"
+      : stacked
+        ? "flex flex-col items-start gap-3"
+        : "flex items-center justify-between gap-4 lg:gap-6",
+  );
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={rowClass}>
+        {content}
+      </button>
+    );
+  }
+
+  return <div className={rowClass}>{content}</div>;
 }
 
 export function SettingsCard({ children }: { children: React.ReactNode }) {
@@ -51,8 +64,8 @@ export function SectionLabel({
   right?: React.ReactNode;
 }) {
   return (
-    <div className="mb-2 flex items-end justify-between">
-      <span className="text-[13px] font-medium text-foreground-300">{children}</span>
+    <div className="mb-1.5 flex items-end justify-between px-1">
+      <span className="text-[13px] font-normal uppercase tracking-wide text-foreground-300/60 lg:text-[12.5px]">{children}</span>
       {right}
     </div>
   );
@@ -86,15 +99,21 @@ export function SettingsDropdown<T extends string>({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border-100/70 bg-background-200/60 px-3 py-2 pr-8 text-sm text-foreground-100 transition-colors hover:border-foreground-300/30 focus:border-accent-100/50 focus:outline-none lg:min-h-0 lg:rounded-md lg:py-[5px] lg:text-[13px]"
+        className={cn(
+          "flex items-center gap-1 text-[15px] text-foreground-300 transition-colors",
+          "lg:min-h-0 lg:gap-1.5 lg:rounded-md lg:border lg:border-border-100/70 lg:bg-background-200/60 lg:px-3 lg:py-[5px] lg:pr-8 lg:text-[13px] lg:text-foreground-100",
+        )}
       >
         {selected?.label ?? value}
-        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="absolute right-2.5 opacity-40">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-30 lg:hidden">
+          <path d="M9 18l6-6-6-6" />
+        </svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="hidden opacity-40 lg:block lg:absolute lg:right-2.5">
           <path d="M6 9l6 6 6-6" />
         </svg>
       </button>
       {open && (
-        <div className="absolute right-0 z-50 mt-1 max-h-[240px] min-w-[180px] overflow-y-auto rounded-xl border border-border-100/70 bg-background-100 py-1 shadow-xl lg:min-w-[160px] lg:rounded-lg">
+        <div className="absolute right-0 z-50 mt-1 max-h-[240px] min-w-[200px] overflow-y-auto rounded-xl border border-border-100/70 bg-background-100 py-1 shadow-xl lg:min-w-[160px] lg:rounded-lg">
           {options.map((opt) => (
             <button
               key={opt.value}
@@ -104,18 +123,18 @@ export function SettingsDropdown<T extends string>({
                 setOpen(false);
               }}
               className={cn(
-                "flex w-full items-center gap-2 px-3.5 py-3 text-left text-sm transition-colors lg:px-3 lg:py-[7px] lg:text-[13px]",
+                "flex w-full items-center gap-2 px-3.5 py-3 text-left text-[15px] transition-colors lg:px-3 lg:py-[7px] lg:text-[13px]",
                 opt.value === value
                   ? "bg-accent-100/10 font-medium text-accent-100"
-                  : "text-foreground-200 hover:bg-foreground-100/5",
+                  : "text-foreground-200 active:bg-foreground-100/5 lg:hover:bg-foreground-100/5",
               )}
             >
               {opt.value === value && (
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
                   <path d="M20 6L9 17l-5-5" />
                 </svg>
               )}
-              <span className={opt.value === value ? "" : "pl-5"}>
+              <span className={opt.value === value ? "" : "pl-[22px]"}>
                 {opt.label}
               </span>
             </button>
@@ -140,14 +159,14 @@ export function Toggle({
       aria-checked={checked}
       onClick={() => onChange(!checked)}
       className={cn(
-        "relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full transition-colors duration-200 lg:h-[22px] lg:w-[42px]",
-        checked ? "bg-green-500" : "bg-foreground-300",
+        "relative inline-flex h-[31px] w-[51px] shrink-0 cursor-pointer rounded-full transition-colors duration-200 lg:h-[22px] lg:w-[42px]",
+        checked ? "bg-green-500" : "bg-foreground-100/20",
       )}
     >
       <span
         className={cn(
-          "pointer-events-none mt-[3px] ml-[3px] inline-block h-[22px] w-[22px] rounded-full bg-white shadow-sm transition-transform duration-200 lg:mt-[2px] lg:ml-[2px] lg:h-[18px] lg:w-[18px]",
-          checked ? "translate-x-[20px]" : "translate-x-0",
+          "pointer-events-none mt-[2px] ml-[2px] inline-block h-[27px] w-[27px] rounded-full bg-white shadow-sm ring-1 ring-black/5 transition-transform duration-200 lg:h-[18px] lg:w-[18px]",
+          checked ? "translate-x-5" : "translate-x-0",
         )}
       />
     </button>

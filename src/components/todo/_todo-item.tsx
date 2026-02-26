@@ -48,6 +48,12 @@ interface TodoItemProps {
   todo: TodoItemType;
   categories?: string[];
   hideCategories?: boolean;
+  /** Hide the "Today" date badge (useful when a parent header already indicates today). Other dates still shown. */
+  hideTodayBadge?: boolean;
+  /** Hide all date badges and the date picker entirely. */
+  hideDate?: boolean;
+  /** Compact: title-only, no description/metadata preview, vertically centered with checkbox. */
+  compactView?: boolean;
   /** Start with the title in editing mode */
   initialEditingTitle?: boolean;
   /** When true, skip the internal SwipeableEmailRow wrapper (swipe handled externally by ListItem). */
@@ -66,6 +72,9 @@ export function TodoItemComponent({
   todo,
   categories: availableCategories = [],
   hideCategories = false,
+  hideTodayBadge = false,
+  hideDate = false,
+  compactView = false,
   initialEditingTitle = false,
   disableSwipe = false,
   onComplete,
@@ -82,6 +91,32 @@ export function TodoItemComponent({
   const [titleDraft, setTitleDraft] = useState(todo.title);
   const isCompleted = todo.status === "completed";
   const monoCategories = useSyncExternalStore(subscribeMonoCategories, getMonoCategories, () => false);
+
+  const [isCompleting, setIsCompleting] = useState(false);
+  const completingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => { if (completingTimerRef.current) clearTimeout(completingTimerRef.current); };
+  }, []);
+
+  useEffect(() => {
+    if (isCompleted && completingTimerRef.current) {
+      clearTimeout(completingTimerRef.current);
+      completingTimerRef.current = null;
+      setIsCompleting(false);
+    }
+  }, [isCompleted]);
+
+  const handleComplete = useCallback(() => {
+    if (isCompleting || isCompleted) return;
+    setIsCompleting(true);
+    completingTimerRef.current = setTimeout(() => {
+      completingTimerRef.current = null;
+      onComplete(todo.id);
+    }, 600);
+  }, [isCompleting, isCompleted, onComplete, todo.id]);
+
+  const showCompleted = isCompleted || isCompleting;
   const { contacts, searchContacts, searchEmails } = useSmartInput();
   const subtasks = todo.subtasks ?? [];
   const completedSubtasks = subtasks.filter((s) => s.completed).length;
@@ -165,27 +200,28 @@ export function TodoItemComponent({
   );
 
   const containerCls = cn(
-    "rounded-xl ring",
-    isCompleted
-      ? "ring-transparent"
-      : "ring-transparent hover:ring-border-100/80",
+    "rounded-xl transition-colors",
+    !showCompleted && "hover:bg-foreground-100/[0.03]",
   );
 
   const innerContent = (
     <div className="group relative bg-background-100">
-      <div className="flex gap-1 lg:pl-1 lg:pr-2.5 items-start">
+      <div className="flex items-start gap-1 pr-1">
         {/* Checkbox with touch-friendly hit area */}
         <button
           type="button"
-          onClick={() => isCompleted ? onUncomplete(todo.id) : onComplete(todo.id)}
-          className="-ml-1 flex h-12 w-12 shrink-0 items-center justify-center lg:h-11 lg:w-11"
+          onClick={() => {
+            if (isCompleting) return;
+            if (isCompleted) onUncomplete(todo.id);
+            else handleComplete();
+          }}
+          className={cn("-ml-1 flex w-12 shrink-0 items-center justify-center", compactView ? "h-9" : "h-12")}
         >
-          <TodoCheckbox completed={isCompleted} />
+          <TodoCheckbox completed={showCompleted} animateIn={isCompleting} />
         </button>
 
-        {/* Content */}
-        <div className="min-w-0 pt-2 flex-1">
-          <div className="flex flex-col lg:flex-row lg:items-start lg:gap-2">
+        <div className={cn("min-w-0 flex-1", compactView ? "py-1.5" : "pt-2")}>
+          <div className="flex items-start gap-2">
             {/* Title row — on mobile: title only; on desktop: categories + title inline */}
             <div className="flex min-w-0 flex-1 items-center gap-1 lg:flex-wrap lg:items-start">
               {/* Categories inline on desktop only */}
@@ -197,7 +233,7 @@ export function TodoItemComponent({
                     type="button"
                     onClick={(e) => { e.stopPropagation(); onOpenWorkspace?.(cat); }}
                     className={cn(
-                      "hidden lg:inline-flex mr-1 shrink-0 items-center rounded px-1.5 py-0.5 text-[11px] font-medium leading-[22px] transition-opacity",
+                      "hidden lg:inline-flex mr-1 shrink-0 items-center rounded px-2 py-1 text-xs font-medium leading-tight transition-opacity",
                       color.bg, color.text,
                       onOpenWorkspace && "hover:opacity-80 cursor-pointer",
                     )}
@@ -207,7 +243,7 @@ export function TodoItemComponent({
                   </button>
                 );
               })}
-              {editingTitle && !isCompleted ? (
+              {editingTitle && !showCompleted ? (
                 <SmartInput
                   value={titleDraft}
                   onChange={handleTitleSmartChange}
@@ -218,11 +254,11 @@ export function TodoItemComponent({
                   onSearchContacts={searchContacts}
                   onSearchEmails={searchEmails}
                   autoFocus
-                  className="min-w-0 flex-1 text-base font-medium leading-[24px] text-foreground-100 lg:text-sm lg:leading-[22px]"
+                  className="min-w-0 flex-1 text-base font-medium leading-[24px] text-foreground-100"
                 />
               ) : (
                 <TitleButton
-                  isCompleted={isCompleted}
+                  isCompleted={showCompleted}
                   onSingleClick={() => setExpanded(!expanded)}
                   onDoubleClick={() => {
                     setTitleDraft(todo.title);
@@ -235,8 +271,8 @@ export function TodoItemComponent({
                     allCategories={availableCategories}
                     entities={todo.entities}
                     className={cn(
-                      "text-base font-medium leading-[24px] lg:text-sm lg:leading-[22px]",
-                      isCompleted
+                      "text-base font-medium leading-[24px] transition-colors duration-300",
+                      showCompleted
                         ? "text-foreground-300 line-through"
                         : "text-foreground-100",
                     )}
@@ -246,7 +282,7 @@ export function TodoItemComponent({
             </div>
 
             {/* Meta row — on mobile: categories first, then email/date badges; on desktop: just badges */}
-            <ScrollFade className="flex shrink-0 items-center gap-1 lg:items-start lg:gap-1">
+            <MetaWrapper compact={compactView}>
               {/* Categories on mobile only */}
               {!hideCategories && todoCategories.map((cat) => {
                 const color = monoCategories ? getMonoCategoryColor() : getCategoryColor(cat, availableCategories);
@@ -256,7 +292,7 @@ export function TodoItemComponent({
                     type="button"
                     onClick={(e) => { e.stopPropagation(); onOpenWorkspace?.(cat); }}
                     className={cn(
-                      "inline-flex lg:hidden shrink-0 items-center rounded px-2 py-0.5 text-xs font-medium leading-[24px] transition-opacity",
+                      "hidden shrink-0 items-center rounded px-2.5 py-1 text-xs font-medium leading-tight transition-opacity",
                       color.bg, color.text,
                       onOpenWorkspace && "hover:opacity-80 cursor-pointer",
                     )}
@@ -274,15 +310,13 @@ export function TodoItemComponent({
                     const email = todo.sourceEmails[0];
                     onEmailClick?.(email.threadId, email.accountEmail);
                   }}
-                  className="inline-flex items-center gap-1 rounded bg-foreground-100/6 px-2 py-1 text-xs text-foreground-300 transition-colors hover:bg-foreground-100/10 hover:text-foreground-200 lg:px-1.5 lg:py-0.5 lg:text-[11px]"
+                  className="relative shrink-0 text-foreground-300 transition-colors hover:text-foreground-200 before:absolute before:-inset-3 before:content-['']"
+                  title={todo.sourceEmails[0].subject || parseSenderName(todo.sourceEmails[0].from)}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 lg:h-[9px] lg:w-[9px]">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                     <polyline points="22,6 12,13 2,6" />
                   </svg>
-                  <span className="max-w-[140px] truncate">
-                    {parseSenderName(todo.sourceEmails[0].from)}
-                  </span>
                 </button>
               )}
               {todo.sourceSlack && todo.sourceSlack.length > 0 && (
@@ -292,28 +326,28 @@ export function TodoItemComponent({
                     e.stopPropagation();
                     onSlackClick?.(todo.sourceSlack);
                   }}
-                  className="inline-flex items-center gap-1 rounded bg-[#4A154B]/8 px-2 py-1 text-xs text-[#4A154B] transition-colors hover:bg-[#4A154B]/15 dark:bg-[#4A154B]/20 dark:text-[#E8B4E9] dark:hover:bg-[#4A154B]/30 lg:px-1.5 lg:py-0.5 lg:text-[11px]"
+                  className="relative shrink-0 text-[#4A154B] transition-colors hover:text-[#4A154B]/70 dark:text-[#E8B4E9] dark:hover:text-[#E8B4E9]/70 before:absolute before:-inset-3 before:content-['']"
+                  title={todo.sourceSlack[0].channelName ? `#${todo.sourceSlack[0].channelName}` : "Slack thread"}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" className="shrink-0 lg:h-[9px] lg:w-[9px]">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zm10.124 2.521a2.528 2.528 0 0 1 2.52-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.52V8.834zm-1.271 0a2.528 2.528 0 0 1-2.521 2.521 2.528 2.528 0 0 1-2.521-2.521V2.522A2.528 2.528 0 0 1 15.166 0a2.528 2.528 0 0 1 2.521 2.522v6.312zm-2.521 10.124a2.528 2.528 0 0 1 2.521 2.52A2.528 2.528 0 0 1 15.166 24a2.528 2.528 0 0 1-2.521-2.522v-2.52h2.521zm0-1.271a2.528 2.528 0 0 1-2.521-2.521 2.528 2.528 0 0 1 2.521-2.521h6.312A2.528 2.528 0 0 1 24 15.166a2.528 2.528 0 0 1-2.522 2.521h-6.312z" />
                   </svg>
-                  <span className="max-w-[140px] truncate">
-                    {todo.sourceSlack[0].channelName ? `#${todo.sourceSlack[0].channelName}` : "Slack"}
-                  </span>
                 </button>
               )}
-              {!isCompleted && todo.scheduledDate && (
+              {!hideDate && !showCompleted && todo.scheduledDate && !(hideTodayBadge && formatDate(todo.scheduledDate) === "Today") && (
                 <DateQuickPicker
                   currentDate={todo.scheduledDate}
                   onSelect={(date) => onDateChange(todo.id, date)}
-                  showAsDate
+                  showAsDate={!compactView}
+                  iconOnly={compactView}
                   dateLabel={formatDate(todo.scheduledDate)}
                   isOverdue={isOverdue(todo.scheduledDate)}
+                  isFuture={isFutureDate(todo.scheduledDate)}
                   muted={!isOverdue(todo.scheduledDate)}
                 />
               )}
               <div className="flex max-w-0 items-center gap-1 overflow-hidden opacity-0 transition-all duration-200 ease-out group-hover:ml-1 group-hover:max-w-24 group-hover:opacity-100">
-                {!isCompleted && !todo.scheduledDate && (
+                {!hideDate && !showCompleted && !todo.scheduledDate && (
                   <DateQuickPicker
                     currentDate={todo.scheduledDate}
                     onSelect={(date) => onDateChange(todo.id, date)}
@@ -322,25 +356,25 @@ export function TodoItemComponent({
                 <button
                   type="button"
                   onClick={() => onDelete(todo.id)}
-                  className="rounded-md p-1 text-foreground-300 transition-colors hover:bg-background-200 hover:text-foreground-200"
+                  className="hidden rounded-lg p-2 text-foreground-300 transition-colors hover:bg-background-200 hover:text-foreground-200 lg:block"
                   title="Archive"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="2" y="3" width="20" height="5" rx="1" />
                     <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
                     <path d="M10 12h4" />
                   </svg>
                 </button>
               </div>
-            </ScrollFade>
+            </MetaWrapper>
           </div>
 
           {/* Inline metadata: subtask progress, AI badge, description preview */}
-          {(hasSubtasks || (todo.agentSuggested && todo.userResponse === "accepted" && todo.sourceEmails.length === 0 && (!todo.sourceSlack || todo.sourceSlack.length === 0)) || (todo.description && !expanded)) && (
-            <div className="mt-0.5 pb-2 flex flex-wrap items-center gap-x-2 gap-y-0.5 lg:gap-x-1.5">
+          {!compactView && (hasSubtasks || (todo.agentSuggested && todo.userResponse === "accepted" && todo.sourceEmails.length === 0 && (!todo.sourceSlack || todo.sourceSlack.length === 0)) || (todo.description && !expanded)) && (
+            <div className="mt-0.5 pb-2 flex flex-wrap items-center gap-x-2 gap-y-0.5">
               {hasSubtasks && (
-                <span className="inline-flex items-center gap-1 text-xs text-foreground-300 lg:text-[11px]">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lg:h-2.5 lg:w-2.5">
+                <span className="inline-flex items-center gap-1 text-xs text-foreground-300">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="9 11 12 14 22 4" />
                     <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
                   </svg>
@@ -348,7 +382,7 @@ export function TodoItemComponent({
                 </span>
               )}
               {todo.agentSuggested && todo.userResponse === "accepted" && todo.sourceEmails.length === 0 && (!todo.sourceSlack || todo.sourceSlack.length === 0) && (
-                <span className="inline-flex items-center gap-0.5 rounded-md bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-500 dark:bg-purple-950/30 dark:text-purple-400 lg:px-1.5 lg:text-[11px]">
+                <span className="inline-flex items-center gap-0.5 rounded-md bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-500 dark:bg-purple-950/30 dark:text-purple-400">
                   <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 16 16" fill="currentColor">
                     <path d="M8 0L9.5 6.5L16 8L9.5 9.5L8 16L6.5 9.5L0 8L6.5 6.5L8 0Z" />
                   </svg>
@@ -356,7 +390,7 @@ export function TodoItemComponent({
                 </span>
               )}
               {todo.description && !expanded && (
-                <span className="truncate text-xs text-foreground-300 lg:text-[11px]">
+                <span className="truncate text-xs text-foreground-300">
                   {todo.description}
                 </span>
               )}
@@ -375,11 +409,11 @@ export function TodoItemComponent({
             transition={{ type: "spring", stiffness: 400, damping: 35 }}
             className="overflow-hidden"
           >
-            <div className="border-t border-border-100 px-2 pb-2 pt-2 lg:px-3">
+            <div className="border-t border-border-100 px-2 pb-2 pt-2">
               {/* Category selector */}
               {availableCategories.length > 0 && !isCompleted && (
                 <div className="mb-2">
-                  <div className="flex flex-wrap items-center gap-1.5 lg:gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
                     {availableCategories.map((cat) => {
                       const color = monoCategories ? getMonoCategoryColor() : getCategoryColor(cat, availableCategories);
                       const isActive = todoCategories.includes(cat);
@@ -389,7 +423,7 @@ export function TodoItemComponent({
                           type="button"
                           onClick={() => toggleCategory(cat)}
                           className={cn(
-                            "rounded px-2.5 py-1 text-xs font-medium transition-all lg:px-2 lg:py-0.5 lg:text-[10px]",
+                            "rounded-lg px-3 py-1.5 text-xs font-medium transition-all",
                             isActive
                               ? `${color.bg} ${color.text} ring-1 ring-current/25`
                               : "bg-foreground-100/5 text-foreground-300 hover:bg-foreground-100/10 hover:text-foreground-200",
@@ -404,10 +438,10 @@ export function TodoItemComponent({
                       <button
                         type="button"
                         onClick={() => onUpdate(todo.id, { categories: undefined })}
-                        className="rounded-full p-0.5 text-foreground-300/40 transition-colors hover:text-foreground-300"
+                        className="relative rounded-full p-2 text-foreground-300/40 transition-colors hover:text-foreground-300 before:absolute before:-inset-1 before:content-['']"
                         title="Clear categories"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <line x1="18" y1="6" x2="6" y2="18" />
                           <line x1="6" y1="6" x2="18" y2="18" />
                         </svg>
@@ -541,17 +575,17 @@ function SubtaskRow({
   disabled?: boolean;
 }) {
   return (
-    <div className="group/sub flex items-center gap-0.5 py-1 lg:py-0.5">
+    <div className="group/sub flex items-center gap-0.5 py-0.5">
       <button
         type="button"
         onClick={onToggle}
         disabled={disabled}
-        className="flex h-9 w-9 shrink-0 items-center justify-center lg:h-8 lg:w-8"
+        className="flex h-10 w-10 shrink-0 items-center justify-center"
       >
         <TodoCheckbox completed={subtask.completed} size="sm" disabled={disabled} />
       </button>
       <span className={cn(
-        "flex-1 text-sm lg:text-xs",
+        "flex-1 text-sm",
         subtask.completed ? "text-foreground-300 line-through" : "text-foreground-200",
       )}>
         {subtask.title}
@@ -560,9 +594,9 @@ function SubtaskRow({
         <button
           type="button"
           onClick={onDelete}
-          className="rounded p-0.5 text-foreground-300 opacity-0 transition-opacity hover:text-foreground-200 group-hover/sub:opacity-100"
+          className="relative rounded-lg p-2 text-foreground-300 opacity-0 transition-opacity hover:text-foreground-200 group-hover/sub:opacity-100 before:absolute before:-inset-1 before:content-['']"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18" />
             <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
@@ -598,9 +632,9 @@ function AddSubtaskInput({ onAdd }: { onAdd: (title: string) => void }) {
       <button
         type="button"
         onClick={() => setActive(true)}
-        className="flex w-full items-center gap-1.5 rounded-md px-2 py-2 text-sm text-foreground-300 transition-colors hover:bg-background-200/60 hover:text-foreground-200 lg:py-1 lg:text-xs"
+        className="flex w-full items-center gap-2 rounded-lg px-2 py-2.5 text-sm text-foreground-300 transition-colors hover:bg-background-200/60 hover:text-foreground-200"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lg:h-2.5 lg:w-2.5">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <line x1="12" y1="5" x2="12" y2="19" />
           <line x1="5" y1="12" x2="19" y2="12" />
         </svg>
@@ -610,7 +644,7 @@ function AddSubtaskInput({ onAdd }: { onAdd: (title: string) => void }) {
   }
 
   return (
-    <div className="flex items-center gap-2 py-1.5 lg:py-1">
+    <div className="flex items-center gap-2 py-2">
       <TodoCheckbox size="sm" variant="muted" className="shrink-0" />
       <input
         ref={inputRef}
@@ -622,7 +656,7 @@ function AddSubtaskInput({ onAdd }: { onAdd: (title: string) => void }) {
           if (e.key === "Enter") { e.preventDefault(); submit(); }
           if (e.key === "Escape") { setValue(""); setActive(false); }
         }}
-        className="flex-1 bg-transparent text-sm text-foreground-100 outline-none placeholder:text-foreground-300 lg:text-xs"
+        className="flex-1 bg-transparent text-sm text-foreground-100 outline-none placeholder:text-foreground-300"
         placeholder="Subtask title..."
       />
     </div>
@@ -670,6 +704,15 @@ function TitleButton({
   );
 }
 
+/* ─── Meta Wrapper ─── */
+
+function MetaWrapper({ compact, children }: { compact?: boolean; children: React.ReactNode }) {
+  if (compact) {
+    return <div className="flex shrink-0 items-center gap-2 pt-[5px]">{children}</div>;
+  }
+  return <ScrollFade className="flex shrink-0 items-center gap-1 lg:items-start lg:gap-1">{children}</ScrollFade>;
+}
+
 /* ─── Helpers ─── */
 
 function isOverdue(dateStr: string): boolean {
@@ -680,20 +723,34 @@ function isOverdue(dateStr: string): boolean {
   return target < today;
 }
 
+function isFutureDate(dateStr: string): boolean {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const target = new Date(y, m - 1, d);
+  return target > today;
+}
+
 export function DateQuickPicker({
   currentDate,
   onSelect,
   showAsDate = false,
+  iconOnly = false,
   dateLabel,
   isOverdue: overdue = false,
+  isFuture: future = false,
   muted = false,
   size = "default",
 }: {
   currentDate: string | null;
   onSelect: (date: string | null) => void;
   showAsDate?: boolean;
+  /** Show only the calendar icon with semantic color, no text label. */
+  iconOnly?: boolean;
   dateLabel?: string;
   isOverdue?: boolean;
+  /** When true, icon uses accent color instead of muted/overdue. */
+  isFuture?: boolean;
   muted?: boolean;
   size?: "default" | "lg";
 }) {
@@ -756,19 +813,44 @@ export function DateQuickPicker({
   })() : undefined;
 
   const isLg = size === "lg";
-  const iconSize = isLg ? 15 : showAsDate ? 10 : 13;
+  const iconSize = isLg ? 15 : (showAsDate && !iconOnly) ? 12 : 16;
+
+  const calendarIcon = (
+    <svg xmlns="http://www.w3.org/2000/svg" width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  );
 
   return (
     <div ref={triggerRef}>
-      {showAsDate && dateLabel ? (
+      {iconOnly ? (
         <button
           type="button"
           onClick={() => { setOpen(!open); setShowCal(false); }}
           className={cn(
-            "inline-flex items-center font-medium transition-colors",
+            "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors before:absolute before:-inset-1 before:content-['']",
+            overdue
+              ? "text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
+              : future
+                ? "text-accent-100 hover:bg-accent-100/10"
+                : "text-foreground-300 hover:bg-foreground-100/8 hover:text-foreground-200",
+          )}
+          title={dateLabel || "Set date"}
+        >
+          {calendarIcon}
+        </button>
+      ) : showAsDate && dateLabel ? (
+        <button
+          type="button"
+          onClick={() => { setOpen(!open); setShowCal(false); }}
+          className={cn(
+            "relative inline-flex min-h-[36px] items-center font-medium transition-colors before:absolute before:-inset-1 before:content-['']",
             isLg
               ? "gap-1.5 rounded-[9px] px-3 py-1.5 text-[14px]"
-              : "gap-1 rounded-md px-2 py-1 text-xs lg:px-1.5 lg:py-0.5 lg:text-[11px]",
+              : "gap-1.5 rounded-lg px-3 py-1.5 text-xs",
             muted
               ? "bg-foreground-100/5 text-foreground-300 hover:bg-foreground-100/10 hover:text-foreground-200"
               : overdue
@@ -776,12 +858,7 @@ export function DateQuickPicker({
                 : "bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-950/30 dark:text-blue-400 dark:hover:bg-blue-950/50",
           )}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-            <line x1="16" y1="2" x2="16" y2="6" />
-            <line x1="8" y1="2" x2="8" y2="6" />
-            <line x1="3" y1="10" x2="21" y2="10" />
-          </svg>
+          {calendarIcon}
           {dateLabel}
         </button>
       ) : (
@@ -789,17 +866,12 @@ export function DateQuickPicker({
           type="button"
           onClick={() => { setOpen(!open); setShowCal(false); }}
           className={cn(
-            "text-foreground-300 transition-colors hover:bg-blue-50 hover:text-blue-500 dark:hover:bg-blue-950/30 dark:hover:text-blue-400",
-            isLg ? "rounded-[9px] p-2" : "rounded-md p-1",
+            "relative text-foreground-300 transition-colors hover:bg-blue-50 hover:text-blue-500 dark:hover:bg-blue-950/30 dark:hover:text-blue-400 before:absolute before:-inset-1 before:content-['']",
+            isLg ? "rounded-[9px] p-2" : "rounded-lg p-2",
           )}
           title="Set date"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-            <line x1="16" y1="2" x2="16" y2="6" />
-            <line x1="8" y1="2" x2="8" y2="6" />
-            <line x1="3" y1="10" x2="21" y2="10" />
-          </svg>
+          {calendarIcon}
         </button>
       )}
 
@@ -815,7 +887,7 @@ export function DateQuickPicker({
             transition={{ duration: 0.12 }}
             className="flex items-start"
           >
-            <div className="w-40 rounded-lg border border-border-100 bg-background-100 py-1 shadow-lg">
+            <div className="w-44 rounded-xl border border-border-100 bg-background-100 py-1.5 shadow-lg">
               {[
                 { label: "Today", value: todayStr },
                 { label: "Tomorrow", value: tomorrowStr },
@@ -826,13 +898,13 @@ export function DateQuickPicker({
                   type="button"
                   onClick={() => { onSelect(value); setOpen(false); setShowCal(false); }}
                   className={cn(
-                    "flex w-full items-center px-3 py-2.5 text-sm transition-colors hover:bg-background-200 lg:py-1.5 lg:text-xs",
+                    "flex w-full items-center px-4 py-3 text-sm transition-colors hover:bg-background-200",
                     currentDate === value ? "font-medium text-blue-600 dark:text-blue-400" : "text-foreground-200",
                   )}
                 >
                   {label}
                   {currentDate === value && (
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="ml-auto text-blue-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="ml-auto text-blue-500">
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                   )}
@@ -845,11 +917,11 @@ export function DateQuickPicker({
                 type="button"
                 onClick={() => setShowCal(!showCal)}
                 className={cn(
-                  "flex w-full items-center gap-1.5 px-3 py-2.5 text-sm transition-colors hover:bg-background-200 lg:py-1.5 lg:text-xs",
+                  "flex w-full items-center gap-2 px-4 py-3 text-sm transition-colors hover:bg-background-200",
                   showCal ? "font-medium text-blue-600 dark:text-blue-400" : "text-foreground-200",
                 )}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                   <line x1="16" y1="2" x2="16" y2="6" />
                   <line x1="8" y1="2" x2="8" y2="6" />
@@ -864,7 +936,7 @@ export function DateQuickPicker({
                   <button
                     type="button"
                     onClick={() => { onSelect(null); setOpen(false); setShowCal(false); }}
-                    className="flex w-full items-center px-3 py-2.5 text-sm text-foreground-300 transition-colors hover:bg-background-200 lg:py-1.5 lg:text-xs"
+                    className="flex w-full items-center px-4 py-3 text-sm text-foreground-300 transition-colors hover:bg-background-200"
                   >
                     Remove date
                   </button>

@@ -113,7 +113,9 @@ export async function fetchInboxEmails(
 }
 
 /**
- * Filter out emails that are already tracked by an existing or archived/declined todo.
+ * Filter out emails that are already tracked by an active (pending/suggested)
+ * or explicitly declined todo. Completed todos do NOT block re-suggestion —
+ * the user may need a new action on the same email thread.
  */
 function deduplicateEmails(
   emails: InboxEmail[],
@@ -122,7 +124,16 @@ function deduplicateEmails(
 ): { untracked: InboxEmail[]; skipped: number } {
   const trackedIds = new Set<string>();
 
-  for (const todo of [...activeTodos, ...archivedTodos]) {
+  for (const todo of activeTodos) {
+    if (todo.status === "completed") continue;
+    for (const ref of todo.sourceEmails) {
+      trackedIds.add(ref.messageId);
+      trackedIds.add(ref.threadId);
+    }
+  }
+
+  for (const todo of archivedTodos) {
+    if (todo.userResponse !== "declined") continue;
     for (const ref of todo.sourceEmails) {
       trackedIds.add(ref.messageId);
       trackedIds.add(ref.threadId);
@@ -295,6 +306,7 @@ export async function scanInboxForTodos(
   storage: DurableObjectStorage,
   model: LanguageModel,
   tokens: { email: string; token: string }[],
+  fallbackModel?: LanguageModel,
 ): Promise<ScanResult> {
   const t0 = Date.now();
   console.log(`[inbox-scanner] Fetching inbox emails for ${tokens.length} account(s)...`);
@@ -357,31 +369,42 @@ export async function scanInboxForTodos(
     const prompt = buildClassificationPrompt(batch, prefs.declinedPatterns, prefs.acceptedPatterns, todoFeedback, existingTodoTitles);
     console.log(`[inbox-scanner] Batch ${b + 1}/${batches.length}: ${batch.length} emails, ${prompt.length} chars, calling LLM... (${Date.now() - t0}ms)`);
 
-    try {
-      const result = await generateText({
-        model,
-        system: "You are an email triage assistant. Return only valid JSON.",
-        prompt,
-        abortSignal: AbortSignal.timeout(25_000),
-      });
+    const modelsToTry = fallbackModel ? [model, fallbackModel] : [model];
 
-      const batchTokens = result.usage?.totalTokens ?? 0;
-      totalTokens += batchTokens;
-      const parsed = parseClassificationResponse(result.text);
-      console.log(`[inbox-scanner] Batch ${b + 1} done (${Date.now() - t0}ms): ${parsed.length} suggestion(s), ${batchTokens} tokens`);
+    for (let m = 0; m < modelsToTry.length; m++) {
+      const currentModel = modelsToTry[m];
+      try {
+        const result = await generateText({
+          model: currentModel,
+          system: "You are an email triage assistant. Return only valid JSON.",
+          prompt,
+          abortSignal: AbortSignal.timeout(25_000),
+        });
 
-      for (const s of parsed) {
-        if (s.sourceEmailIndex >= 0 && s.sourceEmailIndex < batch.length) {
-          allSuggestions.push({ suggestion: s, batchEmails: batch });
+        const batchTokens = result.usage?.totalTokens ?? 0;
+        totalTokens += batchTokens;
+        const parsed = parseClassificationResponse(result.text);
+        console.log(`[inbox-scanner] Batch ${b + 1} done${m > 0 ? " (fallback model)" : ""} (${Date.now() - t0}ms): ${parsed.length} suggestion(s), ${batchTokens} tokens`);
+
+        for (const s of parsed) {
+          if (s.sourceEmailIndex >= 0 && s.sourceEmailIndex < batch.length) {
+            allSuggestions.push({ suggestion: s, batchEmails: batch });
+          }
         }
+        break;
+      } catch (e) {
+        const isTimeout = e instanceof DOMException && e.name === "TimeoutError";
+        const isLastModel = m === modelsToTry.length - 1;
+        if (!isLastModel) {
+          console.warn(`[inbox-scanner] Batch ${b + 1} primary model failed (${Date.now() - t0}ms), retrying with fallback...`);
+          continue;
+        }
+        console.error(`[inbox-scanner] Batch ${b + 1} ${isTimeout ? "timed out (25s)" : "failed"} (${Date.now() - t0}ms):`, isTimeout ? "" : e);
+        void logMemoryEvent(storage, "codemode_error", `Scan batch ${b + 1} failed: ${e instanceof Error ? e.message : String(e)}`, {
+          batchSize: batch.length,
+          error: e instanceof Error ? e.message : String(e),
+        }).catch(() => {});
       }
-    } catch (e) {
-      const isTimeout = e instanceof DOMException && e.name === "TimeoutError";
-      console.error(`[inbox-scanner] Batch ${b + 1} ${isTimeout ? "timed out (25s)" : "failed"} (${Date.now() - t0}ms):`, isTimeout ? "" : e);
-      void logMemoryEvent(storage, "codemode_error", `Scan batch ${b + 1} failed: ${e instanceof Error ? e.message : String(e)}`, {
-        batchSize: batch.length,
-        error: e instanceof Error ? e.message : String(e),
-      }).catch(() => {});
     }
   }
 

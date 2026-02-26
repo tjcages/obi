@@ -18,7 +18,7 @@ export {
   type SenderGroup,
   type ThreadGroup,
 } from "./_email-row";
-export { InboxList, type InboxListHandle } from "./_inbox-list";
+export { InboxList, setInboxCache, type InboxListHandle } from "./_inbox-list";
 export { RecipientInput, type Recipient } from "./_recipient-input";
 export { ReplyModal } from "./_reply-modal";
 export { SlackThreadModal } from "./_slack-thread-modal";

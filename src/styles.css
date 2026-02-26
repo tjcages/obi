@@ -283,6 +283,52 @@ body,
   text-decoration-color: var(--color-accent-100);
 }
 
+/* Mobile pill toast — top-center, unstyled + inline styles on toast */
+@media (max-width: 1023px) {
+  [data-sonner-toaster][data-y-position="top"] {
+    top: calc(env(safe-area-inset-top, 0px) + 8px) !important;
+    width: auto !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+    --mobile-offset-left: 0px !important;
+    --mobile-offset-right: 0px !important;
+  }
+
+  [data-sonner-toaster][data-y-position="top"] [data-sonner-toast] {
+    width: auto !important;
+    left: auto !important;
+    right: auto !important;
+  }
+
+  [data-sonner-toaster][data-y-position="top"] [data-sonner-toast] [data-content] {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  [data-sonner-toaster][data-y-position="top"] [data-sonner-toast] [data-title] {
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  [data-sonner-toaster][data-y-position="top"] [data-sonner-toast] [data-button] {
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.7);
+    border: none;
+    border-radius: 100px;
+    padding: 2px 10px;
+    height: 22px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+}
+
 /* Prevent iOS auto-zoom on input focus (requires font-size >= 16px) */
 @media screen and (max-width: 1023px) {
   input,

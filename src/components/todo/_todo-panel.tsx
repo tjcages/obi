@@ -237,11 +237,35 @@ export function TodoPanel({
 
       {/* Selected day's todos */}
       <div>
-        <SectionHeader label={isViewingToday ? "Today" : formatDateLabel(groupAnchor)} count={todayTodos.length} scanning={scanning} />
+        {/* Header with inline add button */}
+        <div className="mb-1 flex items-center justify-between">
+          <span className="flex min-h-[44px] items-center gap-1.5 px-1 text-sm font-semibold text-foreground-100">
+            {isViewingToday ? "Today" : formatDateLabel(groupAnchor)}
+            {todayTodos.length > 0 && (
+              <span className="text-xs font-normal text-foreground-300/70">({todayTodos.length})</span>
+            )}
+            {scanning && (
+              <div className="h-3 w-3 animate-spin rounded-full border border-foreground-300/30 border-t-blue-500" />
+            )}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setNewTodoCategories(lastUsedCategory ? [lastUsedCategory] : []);
+              setAddingTodo(true);
+            }}
+            className="relative flex h-11 w-11 items-center justify-center rounded-lg text-foreground-300 transition-colors hover:bg-foreground-100/5 hover:text-foreground-200"
+            aria-label="Add to-do"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
+        </div>
         {todayTodos.length > 0 ? (
           <List
             gap="gap-0"
-            className="[&>*+*]:-mt-px"
             reorderable
             onReorder={(ids) => void reorderTodos(ids)}
             renderDragOverlay={(id) => {
@@ -250,6 +274,7 @@ export function TodoPanel({
                 <TodoItemComponent
                   todo={t}
                   categories={categories}
+                  compactView
                   disableSwipe
                   onComplete={() => {}}
                   onUncomplete={() => {}}
@@ -271,16 +296,12 @@ export function TodoPanel({
                 rightSwipeVariant="complete"
                 compactSwipe
                 swipeBgClass="bg-background-100"
-                swipeContainerClass={cn(
-                  "rounded-xl border",
-                  todo.status === "completed"
-                    ? "border-transparent"
-                    : "border-transparent hover:border-border-100/80 hover:shadow-sm",
-                )}
+                swipeContainerClass="rounded-xl"
               >
                 <TodoItemComponent
                   todo={todo}
                   categories={categories}
+                  compactView
                   disableSwipe
                   onComplete={completeTodo}
                   onUncomplete={uncompleteTodo}
@@ -333,107 +354,102 @@ export function TodoPanel({
           </div>
         )}
 
-        {/* Inline add todo */}
-        {addingTodo ? (
-          <div className="mt-1.5 rounded-lg border border-border-100 bg-background-100 px-3 py-2">
-            <div className="flex items-center gap-2">
-              <TodoCheckbox variant="muted" className="mt-px shrink-0" />
-              <SmartInput
-                value={newTodoTitle}
-                onChange={(text) => setNewTodoTitle(text)}
-                onSubmit={(text, entities) => {
-                  if (text.trim()) {
-                    const cats = newTodoCategories.length > 0 ? newTodoCategories : undefined;
-                    const sourceEmails = entitiesToSourceEmails(entities);
-                    const todoEntities: TodoEntity[] = entities.map((e) => {
-                      if (e.type === "person") return { type: "person", name: e.name, email: e.email };
-                      if (e.type === "email") return { type: "email", id: e.id, threadId: e.threadId, subject: e.subject, from: e.from };
-                      if (e.type === "category") return { type: "category", name: e.name };
-                      return { type: "link", url: e.url };
-                    });
-                    void createTodo({
-                      title: text.trim(),
-                      scheduledDate: groupAnchor,
-                      categories: cats,
-                      sourceEmails: sourceEmails.length > 0 ? sourceEmails : undefined,
-                      entities: todoEntities.length > 0 ? todoEntities : undefined,
-                    }).then(() => {
-                      setNewTodoTitle("");
-                      setNewTodoCategories([]);
-                      setAddingTodo(false);
-                    });
-                  }
-                }}
-                categories={categories}
-                contacts={contacts}
-                onSearchContacts={searchContacts}
-                onSearchEmails={searchEmails}
-                onCategoriesDetected={(cats) => setNewTodoCategories(cats)}
-                placeholder="What needs to be done?"
-                className="min-w-0 flex-1 text-sm text-foreground-100"
-                autoFocus
-              />
-            </div>
-            {categories.length > 0 && (
-              <div className="mt-1.5 flex items-center gap-1.5 pl-[26px] lg:gap-1">
-                {categories.map((cat) => {
-                  const color = getCategoryColor(cat, categories);
-                  const isSelected = newTodoCategories.includes(cat);
-                  return (
-                    <button
-                      key={cat}
-                      type="button"
-                      onClick={() =>
-                        setNewTodoCategories((prev) =>
-                          prev.includes(cat)
-                            ? prev.filter((c) => c !== cat)
-                            : [...prev, cat],
-                        )
+        {/* Inline add input */}
+        <AnimatePresence>
+          {addingTodo && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="overflow-hidden"
+            >
+              <div className="mb-2 rounded-lg bg-foreground-100/3 px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <TodoCheckbox variant="muted" className="mt-px shrink-0" />
+                  <SmartInput
+                    value={newTodoTitle}
+                    onChange={(text) => setNewTodoTitle(text)}
+                    onSubmit={(text, entities) => {
+                      if (text.trim()) {
+                        const cats = newTodoCategories.length > 0 ? newTodoCategories : undefined;
+                        const sourceEmails = entitiesToSourceEmails(entities);
+                        const todoEntities: TodoEntity[] = entities.map((e) => {
+                          if (e.type === "person") return { type: "person", name: e.name, email: e.email };
+                          if (e.type === "email") return { type: "email", id: e.id, threadId: e.threadId, subject: e.subject, from: e.from };
+                          if (e.type === "category") return { type: "category", name: e.name };
+                          return { type: "link", url: e.url };
+                        });
+                        void createTodo({
+                          title: text.trim(),
+                          scheduledDate: groupAnchor,
+                          categories: cats,
+                          sourceEmails: sourceEmails.length > 0 ? sourceEmails : undefined,
+                          entities: todoEntities.length > 0 ? todoEntities : undefined,
+                        }).then(() => {
+                          setNewTodoTitle("");
+                          setNewTodoCategories([]);
+                          setAddingTodo(false);
+                        });
                       }
-                      className={cn(
-                        "rounded px-2.5 py-1 text-xs font-medium transition-all lg:px-2 lg:py-0.5 lg:text-[10px]",
-                        isSelected
-                          ? `${color.bg} ${color.text} ring-1 ring-current/25`
-                          : "bg-foreground-100/5 text-foreground-300 hover:bg-foreground-100/10 hover:text-foreground-200",
-                      )}
-                      style={isSelected ? color.style : undefined}
-                    >
-                      {cat}
-                    </button>
-                  );
-                })}
-                {newTodoCategories.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setNewTodoCategories([])}
-                    className="ml-0.5 rounded p-0.5 text-foreground-300/50 transition-colors hover:text-foreground-300"
-                    title="Clear categories"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="18" />
-                      <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                  </button>
+                    }}
+                    categories={categories}
+                    contacts={contacts}
+                    onSearchContacts={searchContacts}
+                    onSearchEmails={searchEmails}
+                    onCategoriesDetected={(cats) => setNewTodoCategories(cats)}
+                    placeholder="What needs to be done?"
+                    className="min-w-0 flex-1 text-sm text-foreground-100"
+                    autoFocus
+                  />
+                </div>
+                {categories.length > 0 && (
+                  <div className="mt-1.5 flex items-center gap-1.5 pl-[26px]">
+                    {categories.map((cat) => {
+                      const color = getCategoryColor(cat, categories);
+                      const isSelected = newTodoCategories.includes(cat);
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() =>
+                            setNewTodoCategories((prev) =>
+                              prev.includes(cat)
+                                ? prev.filter((c) => c !== cat)
+                                : [...prev, cat],
+                            )
+                          }
+                          className={cn(
+                            "rounded px-2.5 py-1 text-xs font-medium transition-all",
+                            isSelected
+                              ? `${color.bg} ${color.text} ring-1 ring-current/25`
+                              : "bg-foreground-100/5 text-foreground-300 hover:bg-foreground-100/10 hover:text-foreground-200",
+                          )}
+                          style={isSelected ? color.style : undefined}
+                        >
+                          {cat}
+                        </button>
+                      );
+                    })}
+                    {newTodoCategories.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setNewTodoCategories([])}
+                        className="ml-0.5 rounded p-0.5 text-foreground-300/50 transition-colors hover:text-foreground-300"
+                        title="Clear categories"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
-            )}
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => {
-              setNewTodoCategories(lastUsedCategory ? [lastUsedCategory] : []);
-              setAddingTodo(true);
-            }}
-            className="mt-1.5 flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-foreground-300/60 transition-colors hover:bg-foreground-100/5 hover:text-foreground-300 lg:py-1.5"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lg:h-3.5 lg:w-3.5">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            <span className="text-sm lg:text-xs">Add a to-do</span>
-          </button>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Upcoming */}
@@ -474,7 +490,7 @@ export function TodoPanel({
                 transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
                 className="overflow-hidden"
               >
-                <List gap="gap-0" className="[&>*+*]:-mt-px">
+                <List gap="gap-0">
                   {upcoming.map((todo) => (
                     <ListItem
                       key={todo.id}
@@ -483,6 +499,7 @@ export function TodoPanel({
                       <TodoItemComponent
                         todo={todo}
                         categories={categories}
+                        compactView
                         onComplete={completeTodo}
                         onUncomplete={uncompleteTodo}
                         onDelete={deleteTodo}
@@ -505,7 +522,7 @@ export function TodoPanel({
       {unscheduled.length > 0 && (
         <div>
           <SectionHeader label="No date" count={unscheduled.length} />
-          <List gap="gap-0" className="[&>*+*]:-mt-px">
+          <List gap="gap-0">
             {unscheduled.map((todo) => (
               <ListItem
                 key={todo.id}
@@ -517,11 +534,12 @@ export function TodoPanel({
                 rightSwipeVariant="complete"
                 compactSwipe
                 swipeBgClass="bg-background-100"
-                swipeContainerClass="rounded-xl border border-transparent hover:border-border-100/80 hover:shadow-sm"
+                swipeContainerClass="rounded-xl"
               >
                 <TodoItemComponent
                   todo={todo}
                   categories={categories}
+                  compactView
                   disableSwipe
                   onComplete={completeTodo}
                   onUncomplete={uncompleteTodo}
@@ -576,7 +594,7 @@ export function TodoPanel({
                 transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
                 className="overflow-hidden"
               >
-                <List gap="gap-0" className="[&>*+*]:-mt-3">
+                <List gap="gap-0">
                   {completed.map((todo) => (
                     <ListItem
                       key={todo.id}
@@ -585,6 +603,7 @@ export function TodoPanel({
                       <TodoItemComponent
                         todo={todo}
                         categories={categories}
+                        compactView
                         onComplete={completeTodo}
                         onUncomplete={uncompleteTodo}
                         onDelete={deleteTodo}
@@ -653,7 +672,6 @@ function CategoryBar({
     void onSave?.(orderedIds);
   }, [onSave]);
 
-  const [atEnd, setAtEnd] = useState(true);
   const isMobile = useIsMobile();
 
   const addButton = (
@@ -675,7 +693,7 @@ function CategoryBar({
             if (newName.trim()) addCategory();
             setAdding(false);
           }}
-          placeholder={categories.length > 0 ? "New category..." : "e.g. Work, Personal..."}
+          placeholder={categories.length > 0 ? "New project..." : "e.g. Work, Personal..."}
           className="w-32 rounded border border-border-100 bg-background-100 px-2.5 py-1 text-sm text-foreground-100 outline-none placeholder:text-foreground-300/50 focus:border-accent-100/50 lg:px-2 lg:py-0.5 lg:text-[11px]"
         />
       ) : (
@@ -703,7 +721,7 @@ function CategoryBar({
     <List
       gap="gap-1"
       direction="horizontal"
-      className={isMobile ? "flex-nowrap" : "flex-wrap"}
+      className={isMobile ? "flex-nowrap shrink-0" : "flex-wrap"}
       reorderable={!!onSave}
       onReorder={handleReorder}
       renderDragOverlay={(id) => {
@@ -744,12 +762,13 @@ function CategoryBar({
 
   if (isMobile) {
     return (
-      <div className="flex items-center gap-1.5">
-        <ScrollFade className="min-w-0 flex-1" onAtEnd={setAtEnd}>
+      <ScrollFade className="min-w-0">
+        <div className="flex min-w-full items-center gap-1.5">
           {categoryList}
-          {(atEnd || adding) && <div className="pl-1">{addButton}</div>}
-        </ScrollFade>
-      </div>
+          <div className="flex-1" />
+          <div className="shrink-0 pl-1">{addButton}</div>
+        </div>
+      </ScrollFade>
     );
   }
 

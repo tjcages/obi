@@ -471,7 +471,7 @@ export function EmailRow({ thread, compact, onClick, index = 0, accountColors }:
       <button
         type="button"
         onClick={() => onClick?.(thread)}
-        className={cn("group flex w-full items-center gap-3 border-b border-border-200 text-left transition-colors last:border-b-0 hover:bg-background-200/70", compact ? "px-2 py-3 lg:px-3 lg:py-2.5" : "px-2.5 py-3.5 lg:px-4 lg:py-3.5")}
+        className={cn("group flex w-full items-center gap-3 border-b border-border-200 text-left transition-colors last:border-b-0 hover:bg-background-200/70", compact ? "px-2 py-1.5 lg:px-3 lg:py-2" : "px-2.5 py-3.5 lg:px-4 lg:py-3.5")}
       >
         {!compact && (
           <div className="relative shrink-0 self-start mt-0.5">

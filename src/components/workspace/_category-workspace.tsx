@@ -13,10 +13,29 @@ const DRAFT_TODO_ID = "__draft__";
 const TODOS_GROUP_KEY = "__todos_group__";
 const IMAGE_BREAK = "__brk__";
 
+function formatDateKey(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function formatDateLabel(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diff = today.getTime() - target.getTime();
+  const days = Math.floor(diff / 86_400_000);
+  if (days === 0) return "Today";
+  if (days === 1) return "Yesterday";
+  if (days < 7) return d.toLocaleDateString("en-US", { weekday: "long" });
+  return d.toLocaleDateString("en-US", { month: "long", day: "numeric" });
+}
+
 type TimelineEntry =
   | { kind: "todos"; key: string }
   | { kind: "feed"; item: FeedItem; key: string }
-  | { kind: "images"; items: FeedItem[]; key: string };
+  | { kind: "images"; items: FeedItem[]; key: string }
+  | { kind: "date-separator"; date: string; key: string };
 
 interface CategoryWorkspaceProps {
   category: string;
@@ -62,7 +81,7 @@ export function CategoryWorkspace({
   const color = getCategoryColor(category, allCategories);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsBtnRef = useRef<HTMLButtonElement>(null);
-  const [defaultMode, setDefaultMode] = useState<DefaultMode>("todo");
+  const [defaultMode, setDefaultMode] = useState<DefaultMode>("note");
   const description = ws.workspace?.description;
 
   const [showCompleted, setShowCompleted] = useState(false);
@@ -256,6 +275,36 @@ export function CategoryWorkspace({
     }
     flushImages();
 
+    if (!customOrder) {
+      const withDates: TimelineEntry[] = [];
+      let lastDateKey = "";
+
+      for (const entry of entries) {
+        if (entry.kind === "todos") {
+          withDates.push(entry);
+          continue;
+        }
+
+        const iso = entry.kind === "feed"
+          ? entry.item.createdAt
+          : entry.kind === "images"
+            ? entry.items[0].createdAt
+            : null;
+
+        if (iso) {
+          const dateKey = formatDateKey(iso);
+          if (dateKey !== lastDateKey) {
+            lastDateKey = dateKey;
+            withDates.push({ kind: "date-separator", date: formatDateLabel(iso), key: `date-${dateKey}` });
+          }
+        }
+
+        withDates.push(entry);
+      }
+
+      return withDates;
+    }
+
     return entries;
   }, [unpinnedFeed, ws.workspace?.timelineOrder, hasTodos]);
 
@@ -279,11 +328,12 @@ export function CategoryWorkspace({
           continue;
         }
         const entry = timeline.find((e) => e.key === key);
-        if (entry?.kind === "images") {
+        if (!entry || entry.kind === "date-separator") continue;
+        if (entry.kind === "images") {
           for (const img of entry.items) expandedIds.push(img.id);
           const lastId = entry.items[entry.items.length - 1].id;
           if (breakAfterIds.has(lastId)) expandedIds.push(IMAGE_BREAK);
-        } else if (entry) {
+        } else {
           expandedIds.push(key);
         }
       }
@@ -330,7 +380,7 @@ export function CategoryWorkspace({
   const renderFeedDragOverlay = useCallback(
     (id: string) => {
       const entry = timeline.find((e) => e.key === id);
-      if (!entry || entry.kind === "todos") return null;
+      if (!entry || entry.kind === "todos" || entry.kind === "date-separator") return null;
       if (entry.kind === "images") {
         return <PostedImageGallery items={entry.items} onDelete={async () => {}} />;
       }
@@ -346,45 +396,51 @@ export function CategoryWorkspace({
   );
 
   return (
-    <div className="relative pt-4 pb-16">
-      {/* Accent gradient glow */}
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[600px] opacity-[0.07]"
-        style={{
-          background: `radial-gradient(ellipse 80% 50% at 50% -20%, ${color.hex} 0%, transparent 70%)`,
-        }}
-      />
-
-      {/* Header */}
+    <div className="relative pt-2 pb-16">
+      {/* Project header — minimal, Apple Notes style */}
       <div className="mb-2">
-        <div className="flex items-center justify-between">
-          <span className={cn("rounded px-2.5 py-1 text-sm font-semibold", color.bg, color.text)} style={color.style}>
-            {category}
-          </span>
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl font-bold text-foreground-100 truncate">{category}</h1>
+            {description ? (
+              <p className="mt-1 text-[15px] leading-relaxed text-foreground-300/60">{description}</p>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setSettingsOpen(true)}
+                className="mt-1 text-[15px] text-foreground-300/30 transition-colors hover:text-foreground-300/50"
+              >
+                Add a description...
+              </button>
+            )}
+          </div>
           <button
             ref={settingsBtnRef}
             type="button"
             onClick={() => setSettingsOpen((v) => !v)}
             className={cn(
-              "rounded-md p-1.5 transition-colors",
+              "rounded-lg p-2 transition-colors",
               settingsOpen
                 ? "bg-foreground-100/10 text-foreground-100"
-                : "text-foreground-300/40 hover:text-foreground-300",
+                : "text-foreground-300/30 hover:text-foreground-300/60",
             )}
-            title="Category settings"
+            title="Project settings"
             aria-haspopup="dialog"
             aria-expanded={settingsOpen}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-              <circle cx="12" cy="12" r="3" />
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="5" r="1" />
+              <circle cx="12" cy="12" r="1" />
+              <circle cx="12" cy="19" r="1" />
             </svg>
           </button>
         </div>
 
-        {/* Description (read-only, editable via settings) */}
-        {description && (
-          <p className="mt-1.5 text-sm text-foreground-300">{description}</p>
+        {/* Subtle metadata line */}
+        {ws.workspace && !isEmpty && (
+          <div className="mt-2 text-[11px] text-foreground-300/35">
+            Updated {relativeTime(ws.workspace.updatedAt)}
+          </div>
         )}
       </div>
 
@@ -423,40 +479,28 @@ export function CategoryWorkspace({
         onStartChat={onStartChat}
       />
 
-      {/* Workspace stats caption */}
-      {ws.workspace && !isEmpty && (
-        <WorkspaceStats
-          feed={feed}
-          todoCount={categoryTodos.length}
-          updatedAt={ws.workspace.updatedAt}
-          createdAt={ws.workspace.createdAt}
-        />
-      )}
-
       {/* Resources: inline collapsible on mobile, sidebar on desktop */}
-      {(hasFiles || hasLinks) && (
+      {(hasFiles || hasLinks) && !hideDesktopResources && (
         <>
-          <div className={hideDesktopResources ? "" : "lg:hidden"}>
+          <div className="lg:hidden">
             <InlineResources
               fileItems={fileItems}
               linkItems={linkItems}
               onDelete={ws.deleteItem}
             />
           </div>
-          {!hideDesktopResources && (
-            <div className="hidden lg:block">
-              <ResourcesSidebar
-                fileItems={fileItems}
-                linkItems={linkItems}
-                onDelete={ws.deleteItem}
-              />
-            </div>
-          )}
+          <div className="hidden lg:block">
+            <ResourcesSidebar
+              fileItems={fileItems}
+              linkItems={linkItems}
+              onDelete={ws.deleteItem}
+            />
+          </div>
         </>
       )}
 
       {/* Main feed — reorderable timeline */}
-      <div className="mt-4">
+      <div className="mt-2">
         {ws.loading && !ws.workspace ? (
           <div className="flex items-center justify-center py-12">
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-border-100 border-t-blue-500" />
@@ -465,14 +509,14 @@ export function CategoryWorkspace({
           <div className="mt-8 px-4 py-12 text-center">
             <div className="text-sm text-foreground-300/60">No activity yet</div>
             <p className="mt-1 text-xs text-foreground-300/40">
-              Write a note, drop files, or add to-dos with this category
+              Write a note, drop files, or add to-dos to this project
             </p>
           </div>
         ) : (
           <>
             {/* Pinned items — always at top, outside reorderable list */}
             {pinnedEntries.length > 0 && (
-              <div className="mt-3 space-y-1.5">
+              <div className="space-y-1">
                 {pinnedEntries.map((entry) => {
                   if (entry.kind === "images") {
                     return (
@@ -501,8 +545,8 @@ export function CategoryWorkspace({
             {/* Unified feed — todos group is static, other items are draggable */}
             {timeline.length > 0 && (
               <List
-                gap="gap-1.5"
-                className="mt-3"
+                gap="gap-1"
+                className="mt-2"
                 reorderable
                 onReorder={handleReorder}
                 renderDragOverlay={renderFeedDragOverlay}
@@ -510,10 +554,9 @@ export function CategoryWorkspace({
                 {timeline.map((entry) => {
                   if (entry.kind === "todos") {
                     return (
-                      <ListItem key={TODOS_GROUP_KEY} itemId={TODOS_GROUP_KEY} static className="my-6">
+                      <ListItem key={TODOS_GROUP_KEY} itemId={TODOS_GROUP_KEY} static className="my-3">
                         <List
                           gap="gap-0"
-                          className="[&>*+*]:-mt-px"
                           reorderable={!!onReorderTodos}
                           onReorder={(ids) => void onReorderTodos?.(ids)}
                           renderDragOverlay={(id) => {
@@ -522,6 +565,7 @@ export function CategoryWorkspace({
                               <TodoItemComponent
                                 todo={t}
                                 categories={allCategories}
+                                compactView
                                 hideCategories
                                 disableSwipe
                                 onComplete={() => {}}
@@ -550,16 +594,12 @@ export function CategoryWorkspace({
                               rightSwipeVariant="complete"
                               compactSwipe
                               swipeBgClass="bg-background-100"
-                              swipeContainerClass={cn(
-                                "rounded-xl border",
-                                todo.status === "completed"
-                                  ? "border-transparent"
-                                  : "border-transparent hover:border-border-100/80 hover:shadow-sm",
-                              )}
+                              swipeContainerClass="rounded-xl"
                             >
                               <TodoItemComponent
                                 todo={todo}
                                 categories={allCategories}
+                                compactView
                                 hideCategories
                                 disableSwipe
                                 initialEditingTitle={todo.id === DRAFT_TODO_ID}
@@ -610,6 +650,18 @@ export function CategoryWorkspace({
                             });
                           } : undefined}
                         />
+                      </ListItem>
+                    );
+                  }
+
+                  if (entry.kind === "date-separator") {
+                    return (
+                      <ListItem key={entry.key} itemId={entry.key} static>
+                        <div className="py-1 pt-5">
+                          <span className="text-[11px] font-medium text-foreground-300/30">
+                            {entry.date}
+                          </span>
+                        </div>
                       </ListItem>
                     );
                   }
@@ -736,6 +788,7 @@ function TodoClusterFooter({
                   key={todo.id}
                   todo={todo}
                   categories={allCategories}
+                  compactView
                   hideCategories
                   onComplete={(id) => void onCompleteTodo?.(id)}
                   onUncomplete={(id) => void onUncompleteTodo?.(id)}
@@ -753,7 +806,7 @@ function TodoClusterFooter({
   );
 }
 
-// ─── Workspace Stats ─────────────────────────────────────
+// ─── Project Header Stats ─────────────────────────────────────
 
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -768,7 +821,7 @@ function relativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-function WorkspaceStats({
+function ProjectHeaderStats({
   feed,
   todoCount,
   updatedAt,
@@ -783,27 +836,36 @@ function WorkspaceStats({
   const notes = feed.filter((i) => i.type === "note").length;
   const links = feed.filter((i) => i.type === "link").length;
 
-  const stats: string[] = [];
-  stats.push(`Updated ${relativeTime(updatedAt)}`);
-  if (todoCount > 0) stats.push(`${todoCount} to-do${todoCount !== 1 ? "s" : ""}`);
-  if (notes > 0) stats.push(`${notes} note${notes !== 1 ? "s" : ""}`);
-  if (uploads > 0) stats.push(`${uploads} upload${uploads !== 1 ? "s" : ""}`);
-  if (links > 0) stats.push(`${links} link${links !== 1 ? "s" : ""}`);
-
-  const created = new Date(createdAt);
-  const age = Date.now() - created.getTime();
-  if (age > 7 * 24 * 60 * 60 * 1000) {
-    stats.push(`Created ${created.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`);
-  }
+  const statItems: { label: string; count: number }[] = [];
+  if (todoCount > 0) statItems.push({ label: todoCount === 1 ? "task" : "tasks", count: todoCount });
+  if (notes > 0) statItems.push({ label: notes === 1 ? "note" : "notes", count: notes });
+  if (uploads > 0) statItems.push({ label: uploads === 1 ? "file" : "files", count: uploads });
+  if (links > 0) statItems.push({ label: links === 1 ? "link" : "links", count: links });
 
   return (
-    <div className="flex mt-2 flex-wrap items-center gap-x-1.5 px-1 text-[11px] text-foreground-300/40">
-      {stats.map((stat, i) => (
-        <span key={stat} className="flex items-center gap-1.5">
-          {i > 0 && <span className="text-foreground-300/20">·</span>}
-          {stat}
+    <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-foreground-300/50">
+      {statItems.map((stat) => (
+        <span key={stat.label} className="flex items-center gap-1">
+          <span className="font-medium text-foreground-300/70">{stat.count}</span>
+          {stat.label}
         </span>
       ))}
+      <span className="flex items-center gap-1">
+        <span className="text-foreground-300/30">·</span>
+        Updated {relativeTime(updatedAt)}
+      </span>
+      {(() => {
+        const age = Date.now() - new Date(createdAt).getTime();
+        if (age > 7 * 24 * 60 * 60 * 1000) {
+          return (
+            <span className="flex items-center gap-1">
+              <span className="text-foreground-300/30">·</span>
+              Created {new Date(createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+            </span>
+          );
+        }
+        return null;
+      })()}
     </div>
   );
 }

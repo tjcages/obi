@@ -56,20 +56,20 @@ export function FeedItemRenderer({ item, onUpdate, onDelete, onEmailClick, clust
     >
     <div
       className={cn(
-        "group relative",
+        "group relative transition-colors duration-150",
         isNote
           ? cn(
-              "rounded-lg border border-transparent transition-[border-color,background-color,box-shadow] duration-150",
+              "rounded-lg",
               isPinned
-                ? "border-border-100/60 bg-background-100/80 hover:shadow-sm"
+                ? "bg-foreground-100/2"
                 : isHighlighted
-                  ? "border-l-[3px] border-l-current rounded-l-sm hover:shadow-sm"
-                  : "bg-transparent hover:border-border-100/80 hover:bg-background-100 hover:shadow-sm",
+                  ? "border-l-[3px] border-l-current rounded-l-sm"
+                  : "hover:bg-foreground-100/2",
             )
           : isImage
-            ? "overflow-hidden rounded-lg border border-border-100/50 bg-background-100 transition-shadow hover:shadow-sm"
+            ? "overflow-hidden rounded-xl"
             : cn(
-                "border border-border-100/80 bg-background-100 transition-shadow hover:shadow-sm",
+                "rounded-xl bg-foreground-100/3",
                 borderRadius,
                 borderTop,
               ),
@@ -95,6 +95,11 @@ export function FeedItemRenderer({ item, onUpdate, onDelete, onEmailClick, clust
         {item.type === "image" && <ImageContent item={item} />}
         {item.type === "file" && <FileContent item={item} />}
         {item.type === "link" && <LinkContent item={item} />}
+        {!isImage && (
+          <div className="mt-1.5 text-[10px] text-foreground-300/30">
+            {formatTime(item.createdAt)}
+          </div>
+        )}
       </div>
 
       {isImage ? (

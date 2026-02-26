@@ -1,15 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  AccountBadges,
   CategoryWorkspace,
-  ResourcesSidebar,
   CompactInboxSidebar,
   ConversationSidebar,
   EmailModal,
   GmailChat,
   Header,
-  InboxList,
   List,
   ListItem,
   MemoryPanel,
@@ -24,9 +21,10 @@ import {
   type ThreadGroup,
 } from "../components";
 import { Drawer } from "../components/ui/_drawer";
+import { useNavStackContext } from "../components/nav-stack";
 import type { ComposeMode } from "../components/email/_email-modal";
 import type { TodoSlackRef } from "../lib";
-import { cn, useMediaQuery, useTodos, useSuggestions, useConversations, useAccounts, useScan, useWorkspace, useResizablePanel, useUndoRedo, setCustomCategoryColors, getCategoryColor, type TodoItem } from "../lib";
+import { cn, useMediaQuery, useTodos, useSuggestions, useConversations, useAccounts, useScan, useWorkspace, useResizablePanel, useUndoRedo, setCustomCategoryColors, getCategoryColor, type TodoItem, type FeedItem } from "../lib";
 
 // function formatScanAge(iso: string): string {
 //   const diffMs = Date.now() - new Date(iso).getTime();
@@ -89,7 +87,7 @@ function RightColumnCategories({
     <div className="mt-6">
       <div className="mb-3 flex items-center justify-between px-0.5">
         <span className="text-[10px] font-medium uppercase tracking-widest text-foreground-300">
-          Workspaces
+          Projects
         </span>
       </div>
       <div className="grid grid-cols-2 gap-2">
@@ -182,11 +180,135 @@ function RightColumnCategories({
   );
 }
 
-interface HomePageProps {
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function RightColumnResources({
+  feed,
+  onDelete,
+}: {
+  feed: FeedItem[];
+  onDelete: (id: string) => Promise<void>;
+}) {
+  const linkItems = useMemo(() => feed.filter((i) => i.type === "link"), [feed]);
+  const fileItems = useMemo(() => feed.filter((i) => i.type === "file"), [feed]);
+
+  if (linkItems.length === 0 && fileItems.length === 0) return null;
+
+  return (
+    <div className="pt-8">
+      {linkItems.length > 0 && (
+        <div>
+          <div className="mb-2 px-0.5">
+            <span className="text-[10px] font-medium uppercase tracking-widest text-foreground-300">
+              Links
+            </span>
+          </div>
+          <div className="space-y-0.5">
+            {linkItems.map((item) => {
+              const ref = item.linkRef;
+              if (!ref) return null;
+              let hostname = ref.url;
+              try { hostname = new URL(ref.url).hostname; } catch { /* keep raw */ }
+              const faviconSrc = ref.favicon || `https://icons.duckduckgo.com/ip3/${hostname}.ico`;
+              return (
+                <div key={item.id} className="group/link relative">
+                  <a
+                    href={ref.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 rounded-lg px-1 py-1.5 transition-colors hover:bg-foreground-100/5"
+                  >
+                    <img
+                      src={faviconSrc}
+                      alt=""
+                      className="h-3.5 w-3.5 shrink-0 rounded-sm"
+                      loading="lazy"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                    />
+                    <span className="min-w-0 flex-1 truncate text-[12px] text-foreground-200">
+                      {ref.title || hostname}
+                    </span>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => void onDelete(item.id)}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 rounded-md p-1 text-foreground-300/0 transition-colors group-hover/link:text-foreground-300/40 hover:text-red-500!"
+                    title="Remove"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {fileItems.length > 0 && (
+        <div className={cn(linkItems.length > 0 && "mt-5")}>
+          <div className="mb-2 px-0.5">
+            <span className="text-[10px] font-medium uppercase tracking-widest text-foreground-300">
+              Files
+            </span>
+          </div>
+          <div className="space-y-0.5">
+            {fileItems.map((item) => {
+              const ref = item.fileRef;
+              if (!ref) return null;
+              const href = `/api/workspace/_/file/${encodeURIComponent(ref.key)}`;
+              return (
+                <div key={item.id} className="group/file relative">
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 rounded-lg px-1 py-1.5 transition-colors hover:bg-foreground-100/5"
+                  >
+                    <div className="flex h-4 w-4 shrink-0 items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-foreground-300/60">
+                        <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+                        <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+                      </svg>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[12px] text-foreground-200">{ref.filename}</div>
+                      <div className="text-[10px] text-foreground-300/40">{formatFileSize(ref.size)}</div>
+                    </div>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => void onDelete(item.id)}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 rounded-md p-1 text-foreground-300/0 transition-colors group-hover/file:text-foreground-300/40 hover:text-red-500!"
+                    title="Remove"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface TodoPageProps {
   userId: string;
 }
 
-export default function HomePage({ userId }: HomePageProps) {
+export default function TodoPage({ userId }: TodoPageProps) {
+  const navCtx = useNavStackContext();
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const isWideDesktop = useMediaQuery("(min-width: 1280px)");
   const leftPanel = useResizablePanel({
@@ -203,17 +325,25 @@ export default function HomePage({ userId }: HomePageProps) {
   }, [todoState.preferences.categoryColors]);
 
   const scanState = useScan({
-    onScanComplete: () => void todoState.refresh(),
+    onScanComplete: () => void todoState.refresh({ skipIfMutating: true }),
   });
   const accounts = useAccounts();
   const conv = useConversations({ userId });
 
   const [memoryPanelOpen, setMemoryPanelOpen] = useState(false);
   const [todoPanelOpen, setTodoPanelOpen] = useState(true);
-  const [inboxPanelOpen, setInboxPanelOpen] = useState(false);
+  const [inboxPanelOpen, setInboxPanelOpen] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return new URLSearchParams(window.location.search).get("panel") === "inbox";
+  });
   const [activeCategoryWorkspace, setActiveCategoryWorkspace] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
-    return new URLSearchParams(window.location.search).get("category");
+    const cat = new URLSearchParams(window.location.search).get("category");
+    if (cat) {
+      window.location.href = `/projects/${encodeURIComponent(cat)}`;
+      return cat;
+    }
+    return null;
   });
   const [selectedCalDate, setSelectedCalDate] = useState<string | null>(() => {
     const d = new Date();
@@ -225,14 +355,14 @@ export default function HomePage({ userId }: HomePageProps) {
   const [slackModalRef, setSlackModalRef] = useState<TodoSlackRef[] | null>(null);
 
   const navigateToCategory = useCallback((category: string | null) => {
-    setActiveCategoryWorkspace(category);
-    const url = new URL(window.location.href);
     if (category) {
-      url.searchParams.set("category", category);
+      window.location.href = `/projects/${encodeURIComponent(category)}`;
     } else {
+      setActiveCategoryWorkspace(null);
+      const url = new URL(window.location.href);
       url.searchParams.delete("category");
+      window.history.pushState(null, "", url.toString());
     }
-    window.history.pushState(null, "", url.toString());
   }, []);
 
   useEffect(() => {
@@ -257,6 +387,8 @@ export default function HomePage({ userId }: HomePageProps) {
   const inboxListRef = useRef<InboxListHandle>(null);
   const compactInboxRef = useRef<CompactInboxHandle>(null);
   const mainRef = useRef<HTMLElement>(null);
+  const weekStripRef = useRef<HTMLDivElement>(null);
+  const initialWeekStripScrollDone = useRef(false);
   const { pushUndo } = useUndoRedo();
 
   // ── Scroll-to-dismiss keyboard (iOS-style) ──
@@ -285,6 +417,22 @@ export default function HomePage({ userId }: HomePageProps) {
       main.removeEventListener("touchstart", onTouchStart);
       main.removeEventListener("touchmove", onTouchMove);
     };
+  }, [isDesktop]);
+
+  // ── Hide WeekStrip on mobile load (pull-to-reveal pattern) ──
+
+  useLayoutEffect(() => {
+    if (isDesktop || initialWeekStripScrollDone.current) return;
+    const main = mainRef.current;
+    const strip = weekStripRef.current;
+    if (!main || !strip) return;
+    initialWeekStripScrollDone.current = true;
+    const snapBefore = main.style.scrollSnapType;
+    main.style.scrollSnapType = "none";
+    main.scrollTop = strip.offsetHeight;
+    requestAnimationFrame(() => {
+      main.style.scrollSnapType = snapBefore;
+    });
   }, [isDesktop]);
 
   // ── Escape key ──
@@ -371,12 +519,11 @@ export default function HomePage({ userId }: HomePageProps) {
       const todo = todoState.todos.find((t: TodoItem) => t.id === id);
       if (!todo) return void todoState.deleteTodo(id);
 
-      const label = `Deleted "${todo.title.length > 30 ? `${todo.title.slice(0, 30)}…` : todo.title}"`;
       void todoState.deleteTodo(id);
 
       pushUndo({
         id: `todo-del-${id}-${Date.now()}`,
-        label,
+        label: isDesktop ? `Deleted "${todo.title.length > 30 ? `${todo.title.slice(0, 30)}…` : todo.title}"` : "Archived",
         onUndo: () => void todoState.restoreTodo(todo),
         onRedo: () => void todoState.deleteTodo(id),
       });
@@ -593,7 +740,7 @@ export default function HomePage({ userId }: HomePageProps) {
   const showRightColumn = isWideDesktop && !chatPanelOpen;
 
   return (
-    <div className="flex h-dvh flex-col bg-background-100 text-foreground-100">
+    <div className={cn("flex flex-col bg-background-100 text-foreground-100", navCtx ? "h-full" : "h-dvh")}>
       <Header
         accounts={accounts.accounts}
         activeEmails={accounts.activeEmails}
@@ -611,7 +758,7 @@ export default function HomePage({ userId }: HomePageProps) {
         onChatsToggle={() => setMobileConvDrawerOpen(true)}
         chatBadge={conv.sortedActive.length || undefined}
         activeCategoryWorkspace={activeCategoryWorkspace}
-        onBackFromCategory={() => setActiveCategoryWorkspace(null)}
+        onBackFromCategory={() => { if (navCtx) navCtx.pop(); else window.location.href = "/"; }}
         onSelectAccount={accounts.selectAccount}
         onSelectAll={accounts.selectAllAccounts}
         onSetPrimary={accounts.setPrimary}
@@ -621,8 +768,8 @@ export default function HomePage({ userId }: HomePageProps) {
       />
 
       <div className="flex min-h-0 flex-1">
-        <main ref={mainRef} className="min-h-0 flex-1 overflow-y-auto">
-          <div className={cn("pt-0", isDesktop ? "flex px-4" : "mx-auto max-w-2xl px-2")}>
+        <main ref={mainRef} className={cn("min-h-0 flex-1 overflow-y-auto", !isDesktop && "snap-y snap-proximity")}>
+          <div className={cn("pt-0", isDesktop ? "flex px-4" : "mx-auto max-w-2xl px-0")}>
 
             {/* Desktop left sidebar: compact inbox + conversation list */}
             {isDesktop && (
@@ -753,7 +900,7 @@ export default function HomePage({ userId }: HomePageProps) {
                     <CategoryWorkspace
                       category={activeCategoryWorkspace}
                       allCategories={todoState.preferences.todoCategories ?? []}
-                      onBack={() => navigateToCategory(null)}
+                      onBack={() => { if (navCtx) navCtx.pop(); else window.location.href = "/"; }}
                       onEmailClick={(threadId, accountEmail) => {
                         setSelectedThreadId(threadId);
                         setSelectedAccountEmail(accountEmail);
@@ -791,21 +938,25 @@ export default function HomePage({ userId }: HomePageProps) {
                       onDeleteCategory={(cat) => {
                         const cats = (todoState.preferences.todoCategories ?? []).filter((c) => c !== cat);
                         void todoState.saveCategories(cats);
-                        navigateToCategory(null);
+                        if (navCtx) navCtx.pop(); else window.location.href = "/";
                       }}
+                      hideDesktopResources={showRightColumn}
                     />
                   </div>
                 ) : (
                   <div key="home-content" className="mx-auto max-w-2xl">
               {/* Inline week strip (mobile + regular desktop) */}
               {!showRightColumn && (
-                <WeekStrip
-                  selectedDate={selectedCalDate}
-                  onSelectDate={setSelectedCalDate}
-                  todos={todoState.todos}
-                  className="pb-2 pt-1"
-                />
+                <div ref={weekStripRef} className={cn(!isDesktop && "snap-start")}>
+                  <WeekStrip
+                    selectedDate={selectedCalDate}
+                    onSelectDate={setSelectedCalDate}
+                    todos={todoState.todos}
+                    className="pb-2 pt-1"
+                  />
+                </div>
               )}
+              {!isDesktop && <div className="snap-start" />}
 
               {/* Desktop inline input — mobile uses floating bottom sheet */}
               {isDesktop && (
@@ -866,65 +1017,13 @@ export default function HomePage({ userId }: HomePageProps) {
                 )}
               </AnimatePresence>
 
-              {/* Inbox */}
-              <div className={cn(isDesktop ? "pt-6 pb-16" : "pt-4 pb-40")}>
-                <div className="mb-3 flex items-center justify-between px-1">
-                  <h2 className="text-xs font-medium uppercase tracking-widest text-foreground-300">
-                    Inbox
-                  </h2>
-                  <button
-                    type="button"
-                    onClick={() => setInboxPanelOpen((v) => !v)}
-                    className="rounded-md p-1 text-foreground-300 transition-colors hover:bg-background-200 hover:text-foreground-200"
-                    title={inboxPanelOpen ? "Hide inbox" : "Show inbox"}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points={inboxPanelOpen ? "6 9 12 15 18 9" : "6 15 12 9 18 15"} />
-                    </svg>
-                  </button>
-                </div>
-                <AnimatePresence>
-                  {inboxPanelOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                    >
-                      {accounts.accounts.length > 0 && (
-                        <div className="mb-3 px-1">
-                          <AccountBadges
-                            accounts={accounts.accounts}
-                            activeEmails={accounts.activeEmails}
-                            onToggle={accounts.toggleAccount}
-                            onSelectAll={accounts.selectAllAccounts}
-                            onAddAccount={accounts.addAccount}
-                            onRemoveAccount={accounts.removeAccount}
-                            onUpdateLabel={accounts.updateLabel}
-                          />
-                        </div>
-                      )}
-                      <div className="overflow-hidden rounded-xl border border-border-100/80 bg-background-100">
-                        <InboxList
-                          listRef={inboxListRef}
-                          onEmailClick={handleEmailClick}
-                          onArchive={handleArchiveEmail}
-                          onArchiveGroup={handleArchiveGroup}
-                          onReply={handleReplyEmail}
-                          activeAccountEmails={accounts.activeEmails.length > 0 ? accounts.activeEmails : undefined}
-                          accountColors={accounts.accountColors}
-                        />
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+              <div className={cn(isDesktop ? "pb-16" : "pb-40")} />
                   </div>
                 )}
             </div>
 
-            {/* Right sidebar: calendar + category grid */}
-            {showRightColumn && !activeCategoryWorkspace && (
+            {/* Right sidebar: calendar + projects on home, resources on project pages */}
+            {showRightColumn && (
               <div
                 className="sticky top-0 z-10 shrink-0 self-start overflow-y-auto px-4"
                 style={{
@@ -932,18 +1031,27 @@ export default function HomePage({ userId }: HomePageProps) {
                   maxHeight: "calc(100dvh - 1rem - 64px)",
                 }}
               >
-                <WeekStrip
-                  selectedDate={selectedCalDate}
-                  onSelectDate={setSelectedCalDate}
-                  todos={todoState.todos}
-                  className="pt-8"
-                />
-                <RightColumnCategories
-                  categories={todoState.preferences.todoCategories ?? []}
-                  todos={todoState.todos}
-                  onOpenWorkspace={navigateToCategory}
-                  onSaveCategories={todoState.saveCategories}
-                />
+                {activeCategoryWorkspace ? (
+                  <RightColumnResources
+                    feed={activeWorkspace.workspace?.feed ?? []}
+                    onDelete={activeWorkspace.deleteItem}
+                  />
+                ) : (
+                  <>
+                    <WeekStrip
+                      selectedDate={selectedCalDate}
+                      onSelectDate={setSelectedCalDate}
+                      todos={todoState.todos}
+                      className="pt-8"
+                    />
+                    <RightColumnCategories
+                      categories={todoState.preferences.todoCategories ?? []}
+                      todos={todoState.todos}
+                      onOpenWorkspace={navigateToCategory}
+                      onSaveCategories={todoState.saveCategories}
+                    />
+                  </>
+                )}
               </div>
             )}
 

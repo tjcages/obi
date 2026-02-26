@@ -51,7 +51,7 @@ export function SmartInput({
 }: SmartInputProps) {
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [autocompleteGroups, setAutocompleteGroups] = useState<SuggestionGroup[]>([]);
-  const [autocompletePos, setAutocompletePos] = useState<{ top: number; left: number } | null>(null);
+  const [autocompletePos, setAutocompletePos] = useState<{ top?: number; bottom?: number; left: number } | null>(null);
   const popoverRef = useRef<AutocompletePopoverRef>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const contactSearchDebounce = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -296,10 +296,18 @@ export function SmartInput({
       const coords = view.coordsAtPos(view.state.selection.from);
       const containerRect = containerRef.current?.getBoundingClientRect();
       if (containerRect) {
-        setAutocompletePos({
-          top: coords.bottom - containerRect.top + 4,
-          left: coords.left - containerRect.left,
-        });
+        const mobile = window.matchMedia("(max-width: 767px)").matches;
+        if (mobile) {
+          setAutocompletePos({
+            bottom: containerRect.height - (coords.top - containerRect.top) + 4,
+            left: coords.left - containerRect.left,
+          });
+        } else {
+          setAutocompletePos({
+            top: coords.bottom - containerRect.top + 4,
+            left: coords.left - containerRect.left,
+          });
+        }
       }
     },
     [],
@@ -395,7 +403,8 @@ export function SmartInput({
         <div
           style={{
             position: "absolute",
-            top: autocompletePos.top,
+            ...(autocompletePos.top !== undefined ? { top: autocompletePos.top } : {}),
+            ...(autocompletePos.bottom !== undefined ? { bottom: autocompletePos.bottom } : {}),
             left: Math.max(0, autocompletePos.left),
           }}
         >
@@ -403,6 +412,7 @@ export function SmartInput({
             ref={popoverRef}
             groups={autocompleteGroups}
             onSelect={handleAutocompleteSelect}
+            placement={autocompletePos.bottom !== undefined ? "above" : "below"}
           />
         </div>
       )}

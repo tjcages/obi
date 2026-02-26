@@ -376,11 +376,29 @@ export async function addSuggestedTodos(
 ): Promise<TodoItem[]> {
   const items = await loadTodos(storage);
   const archived = await loadArchivedTodos(storage);
-  const allExisting = [...items, ...archived];
 
+  // Only block re-suggestion for pending/suggested todos and explicitly
+  // declined archived todos. Completed todos should NOT block new suggestions
+  // — the user may need a fresh action on the same email thread.
   const trackedEmailIds = new Set<string>();
   const trackedSlackTs = new Set<string>();
-  for (const todo of allExisting) {
+
+  for (const todo of items) {
+    if (todo.status === "completed") continue;
+    for (const ref of todo.sourceEmails) {
+      trackedEmailIds.add(ref.messageId);
+      trackedEmailIds.add(ref.threadId);
+    }
+    if (todo.sourceSlack) {
+      for (const ref of todo.sourceSlack) {
+        trackedSlackTs.add(ref.messageTs);
+        trackedSlackTs.add(ref.threadTs);
+      }
+    }
+  }
+
+  for (const todo of archived) {
+    if (todo.userResponse !== "declined") continue;
     for (const ref of todo.sourceEmails) {
       trackedEmailIds.add(ref.messageId);
       trackedEmailIds.add(ref.threadId);

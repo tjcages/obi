@@ -12,6 +12,13 @@ import {
 } from "./_email-row";
 import { List, ListItem } from "../ui/_list";
 
+// Module-level inbox cache so the dashboard preview and inbox page share data
+let _cachedInboxEmails: InboxEmail[] | null = null;
+
+export function setInboxCache(emails: InboxEmail[]) {
+  _cachedInboxEmails = emails;
+}
+
 export interface InboxListHandle {
   hideThread: (threadId: string) => void;
   unhideThread: (threadId: string) => void;
@@ -64,8 +71,8 @@ export function InboxList({
   accountColors,
   listRef,
 }: InboxListProps) {
-  const [emails, setEmails] = useState<InboxEmail[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [emails, setEmails] = useState<InboxEmail[]>(_cachedInboxEmails ?? []);
+  const [loading, setLoading] = useState(_cachedInboxEmails === null);
   const [error, setError] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [hiddenThreadIds, setHiddenThreadIds] = useState<Set<string>>(new Set());
@@ -87,6 +94,7 @@ export function InboxList({
         }
         const data = (await res.json()) as { emails: InboxEmail[] };
         setEmails(data.emails);
+        _cachedInboxEmails = data.emails;
         setHiddenThreadIds(new Set());
         setError(null);
       } catch (e) {
@@ -101,7 +109,8 @@ export function InboxList({
 
   useEffect(() => {
     const controller = new AbortController();
-    setLoading(true);
+    const hasCachedData = emails.length > 0;
+    if (!hasCachedData) setLoading(true);
     void fetchInbox(controller.signal);
 
     if (refreshInterval > 0) {

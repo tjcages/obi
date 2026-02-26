@@ -454,7 +454,7 @@ function CategoryPills({
             setNewCatName("");
             setAddingCategory(false);
           }}
-          placeholder="Category name…"
+          placeholder="Project name…"
           className="w-28 rounded border border-border-100 bg-background-100 px-2.5 py-1 text-sm text-foreground-100 outline-none placeholder:text-foreground-300/50 focus:border-accent-100/50 lg:w-24 lg:px-2 lg:py-0.5 lg:text-[11px]"
         />
       ) : onSaveCategories ? (
@@ -463,7 +463,7 @@ function CategoryPills({
           tabIndex={tabIndex}
           onClick={() => setAddingCategory(true)}
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-foreground-100/5 text-foreground-300/60 transition-colors hover:bg-foreground-100/10 hover:text-foreground-200 lg:h-[22px] lg:w-[22px]"
-          title="Add category"
+          title="Add project"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="5" x2="12" y2="19" />

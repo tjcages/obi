@@ -1,6 +1,6 @@
 import { AIChatAgent } from "@cloudflare/ai-chat";
 import { convertToModelMessages, stepCountIs, streamText, tool } from "ai";
-import type { StreamTextOnFinishCallback, ToolSet, UIMessage } from "ai";
+import type { LanguageModel, StreamTextOnFinishCallback, ToolSet, UIMessage } from "ai";
 import { createWorkersAI } from "workers-ai-provider";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
@@ -2284,24 +2284,27 @@ export class InboxAgent extends AIChatAgent<AgentEnv> {
 
     // For scanning we prefer a fast model. If the user configured an external
     // provider with an API key (OpenAI, Anthropic, etc.) use it — those respond
-    // quickly. Otherwise fall back to a small Workers AI model that can handle
-    // classification without timing out (the user's chat model may be a 72B+
-    // param model that's too slow for structured extraction).
+    // quickly. Otherwise fall back to Workers AI models for classification.
+    // We provide two Workers AI models so if the primary is unavailable
+    // the scanner can retry with the fallback.
     const SCAN_MODEL = "@cf/meta/llama-3.1-8b-instruct" as Parameters<ReturnType<typeof createWorkersAI>>[0];
+    const SCAN_FALLBACK_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast" as Parameters<ReturnType<typeof createWorkersAI>>[0];
     const modelConfig = loadModelConfig(await this.ctx.storage.get<Partial<ModelConfig>>(STORAGE_KEY_MODEL_CONFIG));
     let model = modelConfig.provider !== "workers-ai" ? this.createModelFromConfig(modelConfig) : null;
+    let fallbackModel: LanguageModel | undefined;
     let modelSource: string;
     if (model) {
       modelSource = `${modelConfig.provider}/${modelConfig.modelId}`;
     } else {
       const workersai = createWorkersAI({ binding: this.env.AI });
       model = workersai(SCAN_MODEL);
-      modelSource = `workers-ai/${SCAN_MODEL}`;
+      fallbackModel = workersai(SCAN_FALLBACK_MODEL);
+      modelSource = `workers-ai/${SCAN_MODEL} (fallback: ${SCAN_FALLBACK_MODEL})`;
     }
     console.log(`[scan] Using model: ${modelSource} (${Date.now() - t0}ms)`);
 
     console.log(`[scan] Starting scanInboxForTodos... (${Date.now() - t0}ms)`);
-    const result = await scanInboxForTodos(this.ctx.storage, model, validatedTokens);
+    const result = await scanInboxForTodos(this.ctx.storage, model, validatedTokens, fallbackModel);
     if (result.tokensUsed > 0) {
       await recordScanUsage(this.ctx.storage, result.tokensUsed);
     } else {
@@ -2330,14 +2333,17 @@ export class InboxAgent extends AIChatAgent<AgentEnv> {
     }
 
     const SCAN_MODEL = "@cf/meta/llama-3.1-8b-instruct" as Parameters<ReturnType<typeof createWorkersAI>>[0];
+    const SCAN_FALLBACK = "@cf/meta/llama-3.3-70b-instruct-fp8-fast" as Parameters<ReturnType<typeof createWorkersAI>>[0];
     const modelConfig = loadModelConfig(await this.ctx.storage.get<Partial<ModelConfig>>(STORAGE_KEY_MODEL_CONFIG));
     let model = modelConfig.provider !== "workers-ai" ? this.createModelFromConfig(modelConfig) : null;
+    let slackFallback: LanguageModel | undefined;
     if (!model) {
       const workersai = createWorkersAI({ binding: this.env.AI });
       model = workersai(SCAN_MODEL);
+      slackFallback = workersai(SCAN_FALLBACK);
     }
 
-    const result = await scanSlackForTodos(this.ctx.storage, model);
+    const result = await scanSlackForTodos(this.ctx.storage, model, slackFallback);
     console.log(`[slack-scan] ── Complete (${Date.now() - t0}ms): ${result.suggested} suggested, ${result.tokensUsed} tokens, ${result.threadsScanned} scanned ──`);
 
     return result;

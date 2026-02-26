@@ -142,6 +142,7 @@ function parseClassificationResponse(text: string): Array<{
 export async function scanSlackForTodos(
   storage: DurableObjectStorage,
   model: LanguageModel,
+  fallbackModel?: LanguageModel,
 ): Promise<SlackScanResult> {
   const t0 = Date.now();
   console.log("[slack-scanner] Starting Slack thread scan...");
@@ -203,37 +204,48 @@ export async function scanSlackForTodos(
     );
     console.log(`[slack-scanner] Batch ${b + 1}/${batches.length}: ${batch.length} threads, calling LLM... (${Date.now() - t0}ms)`);
 
-    try {
-      const result = await generateText({
-        model,
-        system: "You are a Slack conversation triage assistant. Return only valid JSON.",
-        prompt,
-        abortSignal: AbortSignal.timeout(25_000),
-      });
+    const modelsToTry = fallbackModel ? [model, fallbackModel] : [model];
 
-      const batchTokens = result.usage?.totalTokens ?? 0;
-      totalTokens += batchTokens;
-      const parsed = parseClassificationResponse(result.text);
-      console.log(`[slack-scanner] Batch ${b + 1} done (${Date.now() - t0}ms): ${parsed.length} suggestion(s), ${batchTokens} tokens`);
+    for (let m = 0; m < modelsToTry.length; m++) {
+      const currentModel = modelsToTry[m];
+      try {
+        const result = await generateText({
+          model: currentModel,
+          system: "You are a Slack conversation triage assistant. Return only valid JSON.",
+          prompt,
+          abortSignal: AbortSignal.timeout(25_000),
+        });
 
-      for (const s of parsed) {
-        if (s.sourceThreadIndex >= 0 && s.sourceThreadIndex < batch.length) {
-          allSuggestions.push({
-            title: s.title,
-            description: s.description,
-            scheduledDate: s.scheduledDate,
-            categories: s.categories,
-            thread: batch[s.sourceThreadIndex],
-          });
+        const batchTokens = result.usage?.totalTokens ?? 0;
+        totalTokens += batchTokens;
+        const parsed = parseClassificationResponse(result.text);
+        console.log(`[slack-scanner] Batch ${b + 1} done${m > 0 ? " (fallback model)" : ""} (${Date.now() - t0}ms): ${parsed.length} suggestion(s), ${batchTokens} tokens`);
+
+        for (const s of parsed) {
+          if (s.sourceThreadIndex >= 0 && s.sourceThreadIndex < batch.length) {
+            allSuggestions.push({
+              title: s.title,
+              description: s.description,
+              scheduledDate: s.scheduledDate,
+              categories: s.categories,
+              thread: batch[s.sourceThreadIndex],
+            });
+          }
         }
+        break;
+      } catch (e) {
+        const isTimeout = e instanceof DOMException && e.name === "TimeoutError";
+        const isLastModel = m === modelsToTry.length - 1;
+        if (!isLastModel) {
+          console.warn(`[slack-scanner] Batch ${b + 1} primary model failed (${Date.now() - t0}ms), retrying with fallback...`);
+          continue;
+        }
+        console.error(`[slack-scanner] Batch ${b + 1} ${isTimeout ? "timed out (25s)" : "failed"} (${Date.now() - t0}ms):`, isTimeout ? "" : e);
+        void logMemoryEvent(storage, "codemode_error", `Slack scan batch ${b + 1} failed: ${e instanceof Error ? e.message : String(e)}`, {
+          batchSize: batch.length,
+          error: e instanceof Error ? e.message : String(e),
+        }).catch(() => {});
       }
-    } catch (e) {
-      const isTimeout = e instanceof DOMException && e.name === "TimeoutError";
-      console.error(`[slack-scanner] Batch ${b + 1} ${isTimeout ? "timed out (25s)" : "failed"} (${Date.now() - t0}ms):`, isTimeout ? "" : e);
-      void logMemoryEvent(storage, "codemode_error", `Slack scan batch ${b + 1} failed: ${e instanceof Error ? e.message : String(e)}`, {
-        batchSize: batch.length,
-        error: e instanceof Error ? e.message : String(e),
-      }).catch(() => {});
     }
   }
 

@@ -1,3 +1,4 @@
+import { motion } from "motion/react";
 import { cn } from "../../lib";
 
 /**
@@ -26,6 +27,8 @@ const checkIconSizes = {
 export interface TodoCheckboxProps {
   /** Whether the checkbox is checked/completed */
   completed?: boolean;
+  /** Animate the check drawing in (for freshly-completed transitions) */
+  animateIn?: boolean;
   /** Size variant */
   size?: keyof typeof sizeClasses;
   /** Visual variant */
@@ -41,9 +44,13 @@ export interface TodoCheckboxProps {
 /**
  * Reusable todo checkbox. Use this component for consistent styling across
  * todo items, subtasks, suggestion cards, and add-todo placeholders.
+ *
+ * Pass `animateIn` to play a satisfying check-draw + scale-bounce when
+ * transitioning from unchecked to checked.
  */
 export function TodoCheckbox({
   completed = false,
+  animateIn = false,
   size = "default",
   variant = completed ? "completed" : "empty",
   disabled = false,
@@ -51,35 +58,60 @@ export function TodoCheckbox({
   children,
 }: TodoCheckboxProps) {
   const effectiveVariant = completed ? "completed" : variant;
+  const iconW = size === "sm" ? 8 : 10;
 
   return (
-    <span
+    <motion.span
       className={cn(
-        "flex items-center justify-center border-2 transition-all",
+        "flex items-center justify-center border-2 transition-colors",
         todoCheckboxShape,
         sizeClasses[size],
         variantClasses[effectiveVariant],
         disabled && "opacity-50",
         className,
       )}
+      animate={animateIn ? { scale: [1, 1.2, 1] } : { scale: 1 }}
+      transition={animateIn ? { duration: 0.3, ease: "easeOut" } : { duration: 0 }}
     >
       {completed &&
         (children ?? (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width={size === "sm" ? 8 : 10}
-            height={size === "sm" ? 8 : 10}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="white"
-            strokeWidth="3.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={checkIconSizes[size]}
-          >
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
+          animateIn ? (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width={iconW}
+              height={iconW}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              strokeWidth="3.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={checkIconSizes[size]}
+            >
+              <motion.path
+                d="M20 6 L9 17 L4 12"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+                transition={{ duration: 0.25, delay: 0.05, ease: "easeOut" }}
+              />
+            </svg>
+          ) : (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width={iconW}
+              height={iconW}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              strokeWidth="3.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={checkIconSizes[size]}
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          )
         ))}
-    </span>
+    </motion.span>
   );
 }

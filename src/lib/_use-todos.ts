@@ -68,7 +68,7 @@ interface UseTodosReturn {
   loading: boolean;
   error: string | null;
   lastUsedCategory: string | null;
-  refresh: () => Promise<void>;
+  refresh: (opts?: { skipIfMutating?: boolean }) => Promise<void>;
   createTodo: (todo: { title: string; description?: string; scheduledDate?: string; categories?: string[]; sourceEmails?: TodoEmailRef[]; entities?: TodoEntity[] }) => Promise<TodoItem | null>;
   updateTodo: (id: string, updates: Partial<Pick<TodoItem, "title" | "description" | "subtasks" | "categories" | "status" | "scheduledDate">>) => Promise<void>;
   deleteTodo: (id: string) => Promise<void>;
@@ -134,10 +134,11 @@ export function useTodos(): UseTodosReturn {
     return () => { mountedRef.current = false; };
   }, []);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (opts?: { skipIfMutating?: boolean }) => {
+    if (opts?.skipIfMutating && pendingMutations.current > 0) return;
     const seq = ++refreshSeqRef.current;
     try {
-      const res = await fetch("/api/todos");
+      const res = await fetch("/api/todos", { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as { todos: TodoItem[]; preferences: TodoPreferences };
       const suggested = data.todos.filter((t) => t.status === "suggested");
@@ -148,6 +149,7 @@ export function useTodos(): UseTodosReturn {
         if (suggested.length > 0) console.warn(`[useTodos] DISCARDING refresh seq=${seq} (current=${refreshSeqRef.current}, mounted=${mountedRef.current}) — had ${suggested.length} suggestions!`);
         return;
       }
+      if (pendingMutations.current > 0) return;
       setTodos((prev) => {
         const prevSuggested = prev.filter((t) => t.status === "suggested").length;
         if (prev.length === 0) {
@@ -181,8 +183,7 @@ export function useTodos(): UseTodosReturn {
   // Skip polls while mutations are in flight to avoid overwriting optimistic state.
   useEffect(() => {
     const interval = setInterval(() => {
-      if (pendingMutations.current > 0) return;
-      void refresh();
+      void refresh({ skipIfMutating: true });
     }, 15_000);
     return () => clearInterval(interval);
   }, [refresh]);
@@ -235,7 +236,8 @@ export function useTodos(): UseTodosReturn {
     pendingMutations.current++;
     setTodos((prev) => prev.filter((t) => t.id !== id));
     try {
-      await fetch(`/api/todos/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/todos/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
     } catch {
       await refresh();
     } finally {
@@ -250,11 +252,12 @@ export function useTodos(): UseTodosReturn {
       return [...prev, todo];
     });
     try {
-      await fetch("/api/todos", {
+      const res = await fetch("/api/todos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(todo),
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
     } catch {
       await refresh();
     } finally {
@@ -268,7 +271,8 @@ export function useTodos(): UseTodosReturn {
       prev.map((t) => t.id === id ? { ...t, status: "completed" as const, completedAt: new Date().toISOString() } : t),
     );
     try {
-      await fetch(`/api/todos/${id}/complete`, { method: "POST" });
+      const res = await fetch(`/api/todos/${id}/complete`, { method: "POST" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
     } catch {
       await refresh();
     } finally {
@@ -282,11 +286,12 @@ export function useTodos(): UseTodosReturn {
       prev.map((t) => t.id === id ? { ...t, status: "pending" as const, completedAt: undefined } : t),
     );
     try {
-      await fetch(`/api/todos/${id}`, {
+      const res = await fetch(`/api/todos/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "pending", completedAt: null }),
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
     } catch {
       await refresh();
     } finally {
@@ -342,7 +347,8 @@ export function useTodos(): UseTodosReturn {
       return prev.map((t) => t.id === id ? { ...t, status: "pending" as const, userResponse: "accepted" as const, sortOrder: minOrder } : t);
     });
     try {
-      await fetch(`/api/todos/${id}/accept`, { method: "POST" });
+      const res = await fetch(`/api/todos/${id}/accept`, { method: "POST" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
     } catch {
       await refresh();
     } finally {
@@ -356,7 +362,8 @@ export function useTodos(): UseTodosReturn {
       prev.map((t) => t.id === id ? { ...t, status: "suggested" as const, userResponse: null, completedAt: undefined } : t),
     );
     try {
-      await fetch(`/api/todos/${id}/unaccept`, { method: "POST" });
+      const res = await fetch(`/api/todos/${id}/unaccept`, { method: "POST" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
     } catch {
       await refresh();
     } finally {
@@ -368,11 +375,12 @@ export function useTodos(): UseTodosReturn {
     pendingMutations.current++;
     setTodos((prev) => prev.filter((t) => t.id !== id));
     try {
-      await fetch(`/api/todos/${id}/decline`, {
+      const res = await fetch(`/api/todos/${id}/decline`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason }),
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
     } catch {
       await refresh();
     } finally {
@@ -387,7 +395,8 @@ export function useTodos(): UseTodosReturn {
       return [...prev, { ...originalTodo, status: "suggested" as const, userResponse: null, declinedReason: undefined, archivedAt: undefined }];
     });
     try {
-      await fetch(`/api/todos/${id}/undecline`, { method: "POST" });
+      const res = await fetch(`/api/todos/${id}/undecline`, { method: "POST" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
     } catch {
       await refresh();
     } finally {

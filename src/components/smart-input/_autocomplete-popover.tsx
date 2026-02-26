@@ -17,6 +17,7 @@ export interface AutocompletePopoverProps {
   groups: SuggestionGroup[];
   onSelect: (item: ContactSuggestion | EmailSuggestion | string) => void;
   allCategories?: string[];
+  placement?: "below" | "above";
   className?: string;
 }
 
@@ -27,7 +28,7 @@ export interface AutocompletePopoverRef {
 export const AutocompletePopover = forwardRef<
   AutocompletePopoverRef,
   AutocompletePopoverProps
->(function AutocompletePopover({ groups, onSelect, allCategories = [], className }, ref) {
+>(function AutocompletePopover({ groups, onSelect, allCategories = [], placement = "below", className }, ref) {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   const flatItems = groups.flatMap((g) =>
@@ -66,7 +67,8 @@ export const AutocompletePopover = forwardRef<
   return (
     <div
       className={cn(
-        "absolute left-0 z-50 mt-1 max-h-64 w-72 overflow-y-auto rounded-lg border border-border-100 bg-background-100 shadow-lg",
+        "absolute left-0 z-50 max-h-64 w-72 overflow-y-auto rounded-lg border border-border-100 bg-background-100 shadow-lg",
+        placement === "above" ? "bottom-0 mb-1" : "mt-1",
         className,
       )}
     >
@@ -80,7 +82,7 @@ export const AutocompletePopover = forwardRef<
             <div className="sticky top-0 border-b border-border-100 bg-background-200/80 px-3 py-2 text-xs font-medium uppercase tracking-wider text-foreground-300 backdrop-blur-sm lg:py-1.5 lg:text-[10px]">
               {group.type === "people" && "People"}
               {group.type === "emails" && "Emails"}
-              {group.type === "categories" && "Categories"}
+              {group.type === "categories" && "Projects"}
             </div>
             {group.items.map((item, i) => {
               const globalIndex = startIndex + i;

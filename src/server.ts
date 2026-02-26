@@ -1831,6 +1831,8 @@ async function handleTodosProxy(
 
   const stub = env.INBOX_AGENT.get(env.INBOX_AGENT.idFromName(userId));
 
+  const NO_CACHE_HEADERS = { "Content-Type": "application/json", "Cache-Control": "no-store" };
+
   // Direct route mappings
   const routeMap: Record<string, { doPath: string; methods: string[] }> = {
     "/api/todos": { doPath: "/todos", methods: ["GET", "POST"] },
@@ -1853,7 +1855,7 @@ async function handleTodosProxy(
     );
     return new Response(doRes.body, {
       status: doRes.status,
-      headers: { "Content-Type": "application/json" },
+      headers: NO_CACHE_HEADERS,
     });
   }
 
@@ -1870,7 +1872,7 @@ async function handleTodosProxy(
     );
     return new Response(doRes.body, {
       status: doRes.status,
-      headers: { "Content-Type": "application/json" },
+      headers: NO_CACHE_HEADERS,
     });
   }
 
@@ -1889,7 +1891,7 @@ async function handleTodosProxy(
     );
     return new Response(doRes.body, {
       status: doRes.status,
-      headers: { "Content-Type": "application/json" },
+      headers: NO_CACHE_HEADERS,
     });
   }
 
@@ -1933,7 +1935,7 @@ async function handleScanProxy(
 
   return new Response(doRes.body, {
     status: doRes.status,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
   });
 }
 

@@ -50,6 +50,9 @@ function stableHash(str: string): number {
 export function getCategoryColor(cat: string, _allCategories?: string[]): CategoryColor {
   const customHex = _customCategoryColors[cat];
   if (customHex) {
+    if (customHex.toLowerCase() === MONO_CATEGORY_COLOR.hex) {
+      return MONO_CATEGORY_COLOR;
+    }
     return {
       bg: "",
       text: "",
@@ -61,8 +64,8 @@ export function getCategoryColor(cat: string, _allCategories?: string[]): Catego
 }
 
 const MONO_CATEGORY_COLOR: CategoryColor = {
-  bg: "bg-foreground-100/[0.04] dark:bg-foreground-100/[0.03]",
-  text: "text-foreground-300",
+  bg: "bg-zinc-100 dark:bg-foreground-100/[0.03]",
+  text: "text-zinc-600 dark:text-foreground-300",
   hex: "#888888",
 };
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { HexColorPicker } from "react-colorful";
-import { cn, CATEGORY_COLORS } from "../../lib";
+import { cn, CATEGORY_COLORS, getMonoCategoryColor } from "../../lib";
 
 type DefaultMode = "todo" | "note" | "chat";
 
@@ -120,7 +120,7 @@ export function CategorySettings({
         ref={panelRef}
         role="dialog"
         aria-modal
-        aria-label="Category settings"
+        aria-label="Project settings"
         className="fixed z-100 w-[340px] rounded-xl border border-border-100/60 bg-background-100 shadow-xl shadow-black/10 animate-in fade-in zoom-in-95 origin-top-right duration-150"
         style={{ top: pos.top, right: pos.right }}
       >
@@ -166,7 +166,7 @@ export function CategorySettings({
             onKeyDown={(e) => {
               if (e.key === "Enter") commitDesc();
             }}
-            placeholder="What is this workspace for?"
+            placeholder="What is this project about?"
             className="w-full rounded-md border border-border-100/70 bg-background-200/60 px-3 py-[5px] text-[13px] text-foreground-100 placeholder:text-foreground-300/40 focus:border-accent-100/50 focus:outline-none"
           />
         </Row>
@@ -229,7 +229,7 @@ export function CategorySettings({
               onClick={() => setConfirmDelete(true)}
               className="text-[13px] text-red-500/70 transition-colors hover:text-red-500"
             >
-              Delete category...
+              Delete project...
             </button>
           )}
         </div>
@@ -341,6 +341,20 @@ function ColorPicker({
           />
         ))}
 
+        {/* Mono / neutral swatch */}
+        <button
+          type="button"
+          onClick={() => onChangeCustomColor(category, getMonoCategoryColor().hex)}
+          className={cn(
+            "h-6 w-6 rounded-full border border-foreground-100/10 bg-foreground-100/10 transition-all",
+            isPresetActive(getMonoCategoryColor().hex)
+              ? "ring-2 ring-foreground-100/30 ring-offset-2 ring-offset-background-100 scale-110"
+              : "hover:scale-110",
+          )}
+          aria-label="Set color to neutral"
+          aria-pressed={isPresetActive(getMonoCategoryColor().hex)}
+        />
+
         {/* Custom picker toggle */}
         <button
           ref={triggerRef}
@@ -348,18 +362,18 @@ function ColorPicker({
           onClick={() => setPickerOpen((v) => !v)}
           className={cn(
             "relative flex h-6 w-6 items-center justify-center rounded-full border-2 border-dashed transition-all",
-            customHex && !CATEGORY_COLORS.some((c) => c.hex === customHex)
+            customHex && !CATEGORY_COLORS.some((c) => c.hex === customHex) && customHex.toLowerCase() !== getMonoCategoryColor().hex
               ? "ring-2 ring-foreground-100/30 ring-offset-2 ring-offset-background-100 scale-110 border-transparent"
               : "border-foreground-300/30 hover:border-foreground-300/60 hover:scale-110",
           )}
           style={
-            customHex && !CATEGORY_COLORS.some((c) => c.hex === customHex)
+            customHex && !CATEGORY_COLORS.some((c) => c.hex === customHex) && customHex.toLowerCase() !== getMonoCategoryColor().hex
               ? { backgroundColor: customHex }
               : undefined
           }
           title="Pick a custom color"
         >
-          {(!customHex || CATEGORY_COLORS.some((c) => c.hex === customHex)) && (
+          {(!customHex || CATEGORY_COLORS.some((c) => c.hex === customHex) || customHex.toLowerCase() === getMonoCategoryColor().hex) && (
             <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-foreground-300/50">
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />

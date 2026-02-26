@@ -70,7 +70,7 @@ export function useScan(options?: UseScanOptions): UseScanReturn {
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch("/api/scan/status");
+      const res = await fetch("/api/scan/status", { cache: "no-store" });
       if (!res.ok) return;
       const data = (await res.json()) as {
         config: ScanConfig;

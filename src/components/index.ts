@@ -7,3 +7,4 @@ export * from "./layout";
 export * from "./settings";
 export * from "./internals";
 export * from "./workspace";
+export * from "./nav-stack";

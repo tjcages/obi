@@ -21,7 +21,6 @@ interface SlackThread {
 
 interface SlackSidebarProps {
   onThreadClick?: (thread: SlackThread) => void;
-  refreshInterval?: number;
 }
 
 function getTimeGroup(dateStr: string): string {
@@ -42,14 +41,18 @@ function truncateText(text: string, max: number): string {
   return text.slice(0, max).trimEnd() + "…";
 }
 
-export function SlackSidebar({
-  onThreadClick,
-  refreshInterval = 60_000,
-}: SlackSidebarProps) {
+const SLACK_ICON_PATH = "M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zm10.124 2.521a2.528 2.528 0 0 1 2.52-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.52V8.834zm-1.271 0a2.528 2.528 0 0 1-2.521 2.521 2.528 2.528 0 0 1-2.521-2.521V2.522A2.528 2.528 0 0 1 15.166 0a2.528 2.528 0 0 1 2.521 2.522v6.312zm-2.521 10.124a2.528 2.528 0 0 1 2.521 2.52A2.528 2.528 0 0 1 15.166 24a2.528 2.528 0 0 1-2.521-2.522v-2.52h2.521zm0-1.271a2.528 2.528 0 0 1-2.521-2.521 2.528 2.528 0 0 1 2.521-2.521h6.312A2.528 2.528 0 0 1 24 15.166a2.528 2.528 0 0 1-2.522 2.521h-6.312z";
+
+const POLL_NORMAL = 30_000;
+const POLL_FAST = 5_000;
+
+export function SlackSidebar({ onThreadClick }: SlackSidebarProps) {
   const [threads, setThreads] = useState<SlackThread[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [processing, setProcessing] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollRateRef = useRef(POLL_NORMAL);
 
   const fetchThreads = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -59,8 +62,19 @@ export function SlackSidebar({
         throw new Error(`Failed to load Slack threads (${res.status})`);
       }
       const data = (await res.json()) as { threads: SlackThread[] };
-      setThreads(data.threads.sort((a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime()));
+      const sorted = data.threads.sort((a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime());
+      setThreads(sorted);
       setError(null);
+
+      const hasUnprocessed = sorted.some((t) => !t.processed);
+      setProcessing(hasUnprocessed);
+
+      const desiredRate = hasUnprocessed ? POLL_FAST : POLL_NORMAL;
+      if (desiredRate !== pollRateRef.current) {
+        pollRateRef.current = desiredRate;
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        intervalRef.current = setInterval(() => void fetchThreads(), desiredRate);
+      }
     } catch (e) {
       if (e instanceof DOMException && e.name === "AbortError") return;
       setError(e instanceof Error ? e.message : "Failed to load");
@@ -73,16 +87,13 @@ export function SlackSidebar({
     const controller = new AbortController();
     setLoading(true);
     void fetchThreads(controller.signal);
-
-    if (refreshInterval > 0) {
-      intervalRef.current = setInterval(() => void fetchThreads(), refreshInterval);
-    }
+    intervalRef.current = setInterval(() => void fetchThreads(), POLL_NORMAL);
 
     return () => {
       controller.abort();
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [fetchThreads, refreshInterval]);
+  }, [fetchThreads]);
 
   const grouped = threads.reduce<Record<string, SlackThread[]>>((acc, thread) => {
     const group = getTimeGroup(thread.receivedAt);
@@ -99,7 +110,7 @@ export function SlackSidebar({
       <div className="px-4 py-6">
         <div className="flex items-center gap-2 px-1 mb-3">
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="currentColor" className="text-foreground-300/70">
-            <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zm10.124 2.521a2.528 2.528 0 0 1 2.52-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.52V8.834zm-1.271 0a2.528 2.528 0 0 1-2.521 2.521 2.528 2.528 0 0 1-2.521-2.521V2.522A2.528 2.528 0 0 1 15.166 0a2.528 2.528 0 0 1 2.521 2.522v6.312zm-2.521 10.124a2.528 2.528 0 0 1 2.521 2.52A2.528 2.528 0 0 1 15.166 24a2.528 2.528 0 0 1-2.521-2.522v-2.52h2.521zm0-1.271a2.528 2.528 0 0 1-2.521-2.521 2.528 2.528 0 0 1 2.521-2.521h6.312A2.528 2.528 0 0 1 24 15.166a2.528 2.528 0 0 1-2.522 2.521h-6.312z" />
+            <path d={SLACK_ICON_PATH} />
           </svg>
           <span className="text-[11px] font-medium uppercase tracking-wider text-foreground-300/50">
             Slack
@@ -118,16 +129,21 @@ export function SlackSidebar({
 
   return (
     <div className="py-6">
-      {/* Header — matches inbox sidebar header pattern */}
       <div className="px-4 pb-3">
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="currentColor" className="text-foreground-300/70">
-              <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zm10.124 2.521a2.528 2.528 0 0 1 2.52-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.52V8.834zm-1.271 0a2.528 2.528 0 0 1-2.521 2.521 2.528 2.528 0 0 1-2.521-2.521V2.522A2.528 2.528 0 0 1 15.166 0a2.528 2.528 0 0 1 2.521 2.522v6.312zm-2.521 10.124a2.528 2.528 0 0 1 2.521 2.52A2.528 2.528 0 0 1 15.166 24a2.528 2.528 0 0 1-2.521-2.522v-2.52h2.521zm0-1.271a2.528 2.528 0 0 1-2.521-2.521 2.528 2.528 0 0 1 2.521-2.521h6.312A2.528 2.528 0 0 1 24 15.166a2.528 2.528 0 0 1-2.522 2.521h-6.312z" />
+              <path d={SLACK_ICON_PATH} />
             </svg>
             <span className="text-[11px] font-medium uppercase tracking-wider text-foreground-300/50">
               Slack
             </span>
+            {processing && (
+              <div className="flex items-center gap-1.5" title="Analyzing messages...">
+                <div className="h-3.5 w-3.5 animate-spin rounded-full border-[1.5px] border-foreground-300/20 border-t-[#4A154B] dark:border-t-[#E8B4E9]" />
+                <span className="text-[10px] text-foreground-300/40">analyzing</span>
+              </div>
+            )}
           </div>
           {threads.length > 0 && (
             <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#4A154B] px-1.5 text-[10px] font-semibold text-white">
@@ -166,7 +182,10 @@ export function SlackSidebar({
                       key={`${thread.channelId}:${thread.threadTs}`}
                       type="button"
                       onClick={() => onThreadClick?.(thread)}
-                      className="w-full rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-foreground-100/5"
+                      className={cn(
+                        "w-full rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-foreground-100/5",
+                        !thread.processed && "animate-pulse",
+                      )}
                     >
                       <div className="flex items-center justify-between gap-2 min-w-0">
                         <div className="flex items-center gap-1.5 min-w-0 truncate">
