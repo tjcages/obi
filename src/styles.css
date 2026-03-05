@@ -286,7 +286,7 @@ body,
 /* Mobile pill toast — top-center, unstyled + inline styles on toast */
 @media (max-width: 1023px) {
   [data-sonner-toaster][data-y-position="top"] {
-    top: calc(env(safe-area-inset-top, 0px) + 8px) !important;
+    top: calc(env(safe-area-inset-top, 0px) + 24px) !important;
     width: auto !important;
     left: 50% !important;
     right: auto !important;
