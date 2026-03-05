@@ -1142,7 +1142,7 @@ function DotIndicator({
   });
 
   return (
-    <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-2">
+    <div className="absolute bottom-[28px] left-0 right-0 flex items-center justify-center gap-2">
       {Array.from({ length: count }, (_, i) => (
         <CarouselDot key={i} index={i} progress={progress} onTap={() => onSelectPage(i)} />
       ))}
