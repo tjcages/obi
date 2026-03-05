@@ -183,7 +183,7 @@ export default function ProjectPage({ userId, projectName: projectNameProp }: Pr
       ) : (
         <main className="min-h-0 flex-1 overflow-y-auto">
           <motion.div
-            className="mx-auto max-w-2xl px-4 pb-16"
+            className="mx-auto max-w-2xl px-4 pb-20"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
@@ -390,7 +390,7 @@ function ProjectCarousel({
             offsetX={offsetX}
             pageWidth={pageWidth}
           >
-            <div className="mx-auto max-w-2xl px-4 pb-16">
+            <div className="mx-auto max-w-2xl px-4 pb-20">
               {feedContent}
             </div>
           </ProjectPage_>
@@ -504,7 +504,7 @@ function ResourcesPage({
   const hasFiles = fileItems.length > 0;
 
   return (
-    <div className="mx-auto max-w-2xl px-4 pt-4 pb-16">
+    <div className="mx-auto max-w-2xl px-4 pt-4 pb-20">
       {/* Links */}
       {hasLinks && (
         <div>

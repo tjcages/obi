@@ -396,7 +396,7 @@ export function CategoryWorkspace({
   );
 
   return (
-    <div className="relative pt-2 pb-16">
+    <div className="relative pt-2 pb-20">
       {/* Project header — minimal, Apple Notes style */}
       <div className="mb-2">
         <div className="flex items-center justify-between gap-3">
