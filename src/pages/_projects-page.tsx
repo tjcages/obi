@@ -393,7 +393,7 @@ export default function ProjectsPage(_props: { userId: string }) {
 
       {/* Unified feed */}
       <motion.main
-        className="mx-auto w-full max-w-2xl px-4 py-4 pb-16 sm:px-6"
+        className="mx-auto w-full max-w-2xl px-4 py-4 pb-20 sm:px-6"
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
