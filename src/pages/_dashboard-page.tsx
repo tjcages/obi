@@ -146,6 +146,86 @@ function getDayLabel(): string {
   return target.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
 }
 
+// ── Home panel shell (iOS grouped content) ──
+
+function HomePanel({
+  children,
+  footer,
+  className,
+}: {
+  children: React.ReactNode;
+  footer?: string;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex min-h-full flex-col rounded-2xl border border-foreground-100/6 bg-foreground-100/[0.03] px-3 py-4",
+        className,
+      )}
+    >
+      <div className="flex-1">{children}</div>
+      {footer ? (
+        <p className="mt-4 border-t border-foreground-100/5 pt-3 text-center text-[12px] text-foreground-300/45">
+          {footer}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function FolderIcon({ color }: { color: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="52"
+      height="44"
+      viewBox="0 0 52 44"
+      fill="none"
+      aria-hidden
+    >
+      <path
+        d="M4 10C4 7.79086 5.79086 6 8 6H20.3431C21.404 6 22.4214 6.42143 23.1716 7.17157L26.8284 10.8284C27.5786 11.5786 28.596 12 29.6569 12H44C46.2091 12 48 13.7909 48 16V36C48 38.2091 46.2091 40 44 40H8C5.79086 40 4 38.2091 4 36V10Z"
+        fill={color}
+        fillOpacity="0.22"
+      />
+      <path
+        d="M4 14C4 11.7909 5.79086 10 8 10H20.3431C21.404 10 22.4214 10.4214 23.1716 11.1716L26.8284 14.8284C27.5786 15.5786 28.596 16 29.6569 16H44C46.2091 16 48 17.7909 48 20V36C48 38.2091 46.2091 40 44 40H8C5.79086 40 4 38.2091 4 36V14Z"
+        fill={color}
+        fillOpacity="0.55"
+      />
+    </svg>
+  );
+}
+
+function PanelSectionHeader({
+  href,
+  title,
+  label,
+  action,
+}: {
+  href: string;
+  title: string;
+  label: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="mb-3 flex items-center justify-between">
+      <NavLink
+        href={href}
+        title={title}
+        className="-ml-2 flex min-h-[44px] items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-foreground-100 transition-colors hover:bg-foreground-100/5"
+      >
+        {label}
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-foreground-300/40">
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      </NavLink>
+      {action}
+    </div>
+  );
+}
+
 // ── Widget shell ──
 
 function useNavLink(href: string, title?: string) {
@@ -422,30 +502,24 @@ function TodoWidget({
 
   return (
     <div className="col-span-2">
-      {/* Header with add button */}
-      <div className="mb-1 flex items-center justify-between">
-        <NavLink
-          href="/todos"
-          title="To-dos"
-          className="-ml-2 flex min-h-[44px] items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-foreground-100 transition-colors hover:bg-foreground-100/5"
-        >
-          {getDayLabel()}
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-foreground-300/40">
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
-        </NavLink>
-        <button
-          type="button"
-          onClick={() => setAdding(true)}
-          className="relative flex h-11 w-11 items-center justify-center rounded-lg text-foreground-300 transition-colors hover:bg-foreground-100/5 hover:text-foreground-200"
-          aria-label="Add to-do"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-        </button>
-      </div>
+      <PanelSectionHeader
+        href="/todos"
+        title="To-dos"
+        label={getDayLabel()}
+        action={(
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className="relative flex h-11 w-11 items-center justify-center rounded-lg text-foreground-300 transition-colors hover:bg-foreground-100/5 hover:text-foreground-200"
+            aria-label="Add to-do"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
+        )}
+      />
 
       {/* Inline add input */}
       <AnimatePresence>
@@ -626,6 +700,14 @@ function TodoWidget({
           </AnimatePresence>
         </div>
       )}
+
+      {(pending.length > 0 || completed.length > 0) && (
+        <p className="mt-4 text-center text-[12px] text-foreground-300/40">
+          {pending.length > 0
+            ? `${pending.length} pending${completed.length > 0 ? ` · ${completed.length} completed` : ""}`
+            : `${completed.length} completed`}
+        </p>
+      )}
     </div>
   );
 }
@@ -652,19 +734,7 @@ function MailWidget({
 
   return (
     <div className="col-span-2">
-      {/* Header */}
-      <div className="mb-1 flex items-center justify-between">
-        <NavLink
-          href="/inbox"
-          title="Mail"
-          className="-ml-2 flex min-h-[44px] items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-foreground-100 transition-colors hover:bg-foreground-100/5"
-        >
-          Mail
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-foreground-300/40">
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
-        </NavLink>
-      </div>
+      <PanelSectionHeader href="/inbox" title="Mail" label="Mail" />
 
       {/* Email list */}
       <div className="-mx-1">
@@ -698,6 +768,10 @@ function MailWidget({
           See more ({remaining})
         </button>
       ) : null}
+
+      <p className="mt-4 text-center text-[12px] text-foreground-300/40">
+        {threads.length === 1 ? "1 thread" : `${threads.length} threads`}
+      </p>
     </div>
   );
 }
@@ -784,6 +858,154 @@ function NewProjectButton({
   );
 }
 
+function ProjectFolderGrid({
+  categories,
+  allCategories,
+  workspacePreviews,
+  todos,
+  onSaveCategories,
+}: {
+  categories: string[];
+  allCategories: string[];
+  workspacePreviews: Record<string, WorkspaceData>;
+  todos: TodoItem[];
+  onSaveCategories: (categories: string[]) => Promise<void>;
+}) {
+  const itemCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const cat of categories) {
+      const pending = todos.filter((t) => t.status === "pending" && t.categories?.includes(cat)).length;
+      const feedCount = workspacePreviews[cat]?.feed?.filter((item) => item.type !== "file").length ?? 0;
+      counts[cat] = pending + feedCount;
+    }
+    return counts;
+  }, [categories, todos, workspacePreviews]);
+
+  return (
+    <div className="grid grid-cols-3 gap-x-1 gap-y-5 sm:grid-cols-3">
+      {categories.map((cat) => {
+        const color = getCategoryColor(cat, allCategories);
+        const count = itemCounts[cat] ?? 0;
+        return (
+          <NavLink
+            key={cat}
+            href={`/projects/${encodeURIComponent(cat)}`}
+            title={cat}
+            className="group flex min-w-0 flex-col items-center px-1 text-center"
+          >
+            <FolderIcon color={color.hex} />
+            <span className="mt-2 w-full truncate text-[13px] font-medium leading-tight text-foreground-100">
+              {cat}
+            </span>
+            <span className="mt-0.5 text-[11px] text-foreground-300/50">
+              {count === 1 ? "1 item" : `${count} items`}
+            </span>
+          </NavLink>
+        );
+      })}
+      <NewProjectFolderTile
+        categories={categories}
+        onSaveCategories={onSaveCategories}
+      />
+    </div>
+  );
+}
+
+function NewProjectFolderTile({
+  categories,
+  onSaveCategories,
+  emptyState = false,
+}: {
+  categories: string[];
+  onSaveCategories: (categories: string[]) => Promise<void>;
+  emptyState?: boolean;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (adding && inputRef.current) inputRef.current.focus();
+  }, [adding]);
+
+  const submit = () => {
+    const trimmed = name.trim();
+    if (!trimmed || categories.includes(trimmed)) {
+      setName("");
+      setAdding(false);
+      return;
+    }
+    void onSaveCategories([...categories, trimmed]).then(() => {
+      window.location.href = `/projects/${encodeURIComponent(trimmed)}`;
+    });
+  };
+
+  if (adding) {
+    return (
+      <div className={cn("flex flex-col items-center px-1", emptyState && "py-8")}>
+        <div className="flex h-[44px] w-full max-w-[200px] items-center justify-center rounded-xl border border-foreground-100/10 bg-foreground-100/4 px-3">
+          <input
+            ref={inputRef}
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { e.preventDefault(); submit(); }
+              if (e.key === "Escape") { setName(""); setAdding(false); }
+            }}
+            onBlur={() => {
+              if (name.trim()) submit();
+              else setAdding(false);
+            }}
+            placeholder="Project name"
+            className="w-full bg-transparent text-center text-[13px] font-medium text-foreground-100 outline-none placeholder:text-foreground-300/30"
+          />
+        </div>
+        <span className="mt-2 text-[13px] font-medium text-foreground-300/60">New project</span>
+      </div>
+    );
+  }
+
+  if (emptyState) {
+    return (
+      <div className="flex flex-col items-center py-8">
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="group flex flex-col items-center"
+          aria-label="New project"
+        >
+          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-dashed border-foreground-100/10 transition-colors group-hover:border-foreground-100/20 group-hover:bg-foreground-100/4">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-foreground-300/40">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </div>
+          <p className="text-[13px] text-foreground-300/50">No projects yet</p>
+          <span className="mt-2 text-[13px] font-medium text-accent-100">Create your first project</span>
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setAdding(true)}
+      className="group flex flex-col items-center px-1 text-center"
+      aria-label="New project"
+    >
+      <div className="flex h-[44px] w-[52px] items-center justify-center rounded-xl border-2 border-dashed border-foreground-100/10 transition-colors group-hover:border-foreground-100/20 group-hover:bg-foreground-100/4">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-foreground-300/50">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+      </div>
+      <span className="mt-2 text-[13px] font-medium text-foreground-300/60">New project</span>
+    </button>
+  );
+}
+
 function ProjectsSection({
   categories,
   allCategories,
@@ -811,7 +1033,6 @@ function ProjectsSection({
   onEmailClick?: (threadId: string, accountEmail?: string) => void;
   onSlackClick?: (slackRef: TodoItem["sourceSlack"]) => void;
 }) {
-  // Build unified recent feed across all projects
   const recentFeed = useMemo(() => {
     const entries: { item: FeedItem; project: string }[] = [];
     for (const cat of categories) {
@@ -825,10 +1046,9 @@ function ProjectsSection({
     entries.sort((a, b) =>
       new Date(b.item.createdAt).getTime() - new Date(a.item.createdAt).getTime(),
     );
-    return entries.slice(0, 8);
+    return entries.slice(0, 4);
   }, [categories, workspacePreviews]);
 
-  // Pending tasks across all projects
   const pendingByProject = useMemo(() => {
     const groups: { project: string; todos: TodoItem[] }[] = [];
     for (const cat of categories) {
@@ -837,146 +1057,145 @@ function ProjectsSection({
       );
       if (pending.length > 0) groups.push({ project: cat, todos: pending.slice(0, 2) });
     }
-    return groups;
+    return groups.slice(0, 2);
   }, [categories, todos]);
 
-  const hasContent = recentFeed.length > 0 || pendingByProject.length > 0;
+  const projectLabel = categories.length === 1 ? "1 project" : `${categories.length} projects`;
 
   return (
-    <div className="col-span-2 mt-4 overflow-hidden">
-      {/* Section header — matches todo header style */}
-      <div className="mb-1 flex items-center justify-between">
-        <NavLink
-          href="/projects"
-          title="Projects"
-          className="-ml-2 flex min-h-[44px] items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-foreground-100 transition-colors hover:bg-foreground-100/5"
-        >
-          Projects
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-foreground-300/40">
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
-        </NavLink>
-        <NewProjectButton
+    <div className="col-span-2">
+      <PanelSectionHeader
+        href="/projects"
+        title="Projects"
+        label="Projects"
+        action={(
+          <NewProjectButton
+            categories={categories}
+            onSaveCategories={onSaveCategories}
+          />
+        )}
+      />
+
+      {categories.length > 0 ? (
+        <ProjectFolderGrid
           categories={categories}
+          allCategories={allCategories}
+          workspacePreviews={workspacePreviews}
+          todos={todos}
           onSaveCategories={onSaveCategories}
         />
-      </div>
-
-      {/* Project chips — quick navigation */}
-      {categories.length > 0 && (
-        <div className="mb-3 flex flex-wrap gap-1.5">
-          {categories.map((cat) => {
-            const color = getCategoryColor(cat, allCategories);
-            return (
-              <NavLink
-                key={cat}
-                href={`/projects/${encodeURIComponent(cat)}`}
-                title={cat}
-                className="inline-flex items-center gap-1.5 rounded-full bg-foreground-100/4 px-2.5 py-1 text-[12px] font-medium text-foreground-100 transition-colors hover:bg-foreground-100/8"
-              >
-                <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color.hex }} />
-                {cat}
-              </NavLink>
-            );
-          })}
-        </div>
+      ) : (
+        <NewProjectFolderTile
+          categories={categories}
+          onSaveCategories={onSaveCategories}
+          emptyState
+        />
       )}
 
-      {/* Pending tasks — grouped by project */}
-      {pendingByProject.map(({ project, todos: projectTodos }) => (
-        <div key={`tasks-${project}`} className="mb-2">
-          <ProjectTagPill name={project} allCategories={allCategories} />
-          <div className="-mx-1">
-            {projectTodos.map((t) => (
-              <TodoItemComponent
-                key={t.id}
-                todo={t}
-                categories={allCategories}
-                hideCategories
-                hideTodayBadge
-                hideDate
-                compactView
-                disableSwipe
-                onComplete={onComplete}
-                onUncomplete={onUncomplete}
-                onDelete={onDelete}
-                onDateChange={onDateChange}
-                onUpdate={onUpdate}
-                onEmailClick={onEmailClick}
-                onSlackClick={onSlackClick}
-              />
-            ))}
-          </div>
-        </div>
-      ))}
-
-      {/* Recent activity feed — unified across all projects */}
-      {recentFeed.length > 0 && (
-        <div className="divide-y divide-foreground-100/5">
-          {recentFeed.map(({ item, project }) => (
-            <div key={item.id} className="py-2">
-              <div className="flex items-center justify-between mb-1">
-                <ProjectTagPill name={project} allCategories={allCategories} />
-                <span className="text-[10px] text-foreground-300/30">
-                  {projectRelativeTime(item.createdAt)}
-                </span>
-              </div>
-              <NavLink
-                href={`/projects/${encodeURIComponent(project)}`}
-                title={project}
-                className="block"
-              >
-                {item.type === "note" && item.content && (
-                  <p className="text-[14px] leading-relaxed text-foreground-100/70 line-clamp-2">
-                    {item.content}
-                  </p>
-                )}
-                {item.type === "image" && item.fileRef && (
-                  <img
-                    src={`/api/workspace/_/file/${encodeURIComponent(item.fileRef.key)}`}
-                    alt=""
-                    className="max-h-32 max-w-full rounded-lg bg-foreground-100/5 object-contain"
-                    loading="lazy"
+      {pendingByProject.length > 0 && (
+        <div className="mt-5 border-t border-foreground-100/5 pt-4">
+          <p className="mb-2 text-[10px] font-medium uppercase tracking-widest text-foreground-300/50">
+            Up next
+          </p>
+          {pendingByProject.map(({ project, todos: projectTodos }) => (
+            <div key={`tasks-${project}`} className="mb-2">
+              <ProjectTagPill name={project} allCategories={allCategories} />
+              <div className="-mx-1">
+                {projectTodos.map((t) => (
+                  <TodoItemComponent
+                    key={t.id}
+                    todo={t}
+                    categories={allCategories}
+                    hideCategories
+                    hideTodayBadge
+                    hideDate
+                    compactView
+                    disableSwipe
+                    onComplete={onComplete}
+                    onUncomplete={onUncomplete}
+                    onDelete={onDelete}
+                    onDateChange={onDateChange}
+                    onUpdate={onUpdate}
+                    onEmailClick={onEmailClick}
+                    onSlackClick={onSlackClick}
                   />
-                )}
-                {item.type === "link" && item.linkRef && (() => {
-                  const ref = item.linkRef;
-                  let hostname = ref.url;
-                  try { hostname = new URL(ref.url).hostname; } catch { /* keep raw */ }
-                  return (
-                    <div className="flex items-center gap-2.5 rounded-lg bg-foreground-100/3 px-3 py-2">
-                      <img
-                        src={ref.favicon || `https://icons.duckduckgo.com/ip3/${hostname}.ico`}
-                        alt=""
-                        className="h-4 w-4 shrink-0 rounded-sm"
-                        loading="lazy"
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                      />
-                      <span className="min-w-0 flex-1 truncate text-[14px] text-foreground-200">
-                        {ref.title || hostname}
-                      </span>
-                    </div>
-                  );
-                })()}
-                {item.type === "email" && item.emailRef && (
-                  <div className="flex items-center gap-2 text-[14px] text-foreground-200/60">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-foreground-300/40">
-                      <rect width="20" height="16" x="2" y="4" rx="2" />
-                      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-                    </svg>
-                    <span className="truncate">{item.emailRef.subject}</span>
-                  </div>
-                )}
-              </NavLink>
+                ))}
+              </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Empty state */}
-      {!hasContent && categories.length === 0 && (
-        <p className="py-4 text-center text-[13px] text-foreground-300/40">
-          No projects yet
+      {recentFeed.length > 0 && (
+        <div className="mt-4 border-t border-foreground-100/5 pt-4">
+          <p className="mb-2 text-[10px] font-medium uppercase tracking-widest text-foreground-300/50">
+            Recent activity
+          </p>
+          <div className="divide-y divide-foreground-100/5">
+            {recentFeed.map(({ item, project }) => (
+              <div key={item.id} className="py-2">
+                <div className="mb-1 flex items-center justify-between">
+                  <ProjectTagPill name={project} allCategories={allCategories} />
+                  <span className="text-[10px] text-foreground-300/30">
+                    {projectRelativeTime(item.createdAt)}
+                  </span>
+                </div>
+                <NavLink
+                  href={`/projects/${encodeURIComponent(project)}`}
+                  title={project}
+                  className="block"
+                >
+                  {item.type === "note" && item.content && (
+                    <p className="line-clamp-2 text-[14px] leading-relaxed text-foreground-100/70">
+                      {item.content}
+                    </p>
+                  )}
+                  {item.type === "image" && item.fileRef && (
+                    <img
+                      src={`/api/workspace/_/file/${encodeURIComponent(item.fileRef.key)}`}
+                      alt=""
+                      className="max-h-32 max-w-full rounded-lg bg-foreground-100/5 object-contain"
+                      loading="lazy"
+                    />
+                  )}
+                  {item.type === "link" && item.linkRef && (() => {
+                    const ref = item.linkRef;
+                    let hostname = ref.url;
+                    try { hostname = new URL(ref.url).hostname; } catch { /* keep raw */ }
+                    return (
+                      <div className="flex items-center gap-2.5 rounded-lg bg-foreground-100/3 px-3 py-2">
+                        <img
+                          src={ref.favicon || `https://icons.duckduckgo.com/ip3/${hostname}.ico`}
+                          alt=""
+                          className="h-4 w-4 shrink-0 rounded-sm"
+                          loading="lazy"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                        />
+                        <span className="min-w-0 flex-1 truncate text-[14px] text-foreground-200">
+                          {ref.title || hostname}
+                        </span>
+                      </div>
+                    );
+                  })()}
+                  {item.type === "email" && item.emailRef && (
+                    <div className="flex items-center gap-2 text-[14px] text-foreground-200/60">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-foreground-300/40">
+                        <rect width="20" height="16" x="2" y="4" rx="2" />
+                        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                      </svg>
+                      <span className="truncate">{item.emailRef.subject}</span>
+                    </div>
+                  )}
+                </NavLink>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {categories.length > 0 && (
+        <p className="mt-5 text-center text-[12px] text-foreground-300/40">
+          {projectLabel}
         </p>
       )}
     </div>
@@ -1003,27 +1222,18 @@ function SlackWidget({ threads }: { threads: SlackThread[] }) {
   if (threads.length === 0) return null;
 
   return (
-    <WidgetCard href="/todos">
-      <WidgetHeader
-        icon={
-          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zm10.124 2.521a2.528 2.528 0 0 1 2.52-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.52V8.834zm-1.271 0a2.528 2.528 0 0 1-2.521 2.521 2.528 2.528 0 0 1-2.521-2.521V2.522A2.528 2.528 0 0 1 15.166 0a2.528 2.528 0 0 1 2.521 2.522v6.312zm-2.521 10.124a2.528 2.528 0 0 1 2.521 2.52A2.528 2.528 0 0 1 15.166 24a2.528 2.528 0 0 1-2.521-2.522v-2.52h2.521zm0-1.271a2.528 2.528 0 0 1-2.521-2.521 2.528 2.528 0 0 1 2.521-2.521h6.312A2.528 2.528 0 0 1 24 15.166a2.528 2.528 0 0 1-2.522 2.521h-6.312z" />
-          </svg>
-        }
-        label="Slack"
-        count={threads.length}
-        countColor="bg-[#4A154B]"
-      />
+    <div className="col-span-2">
+      <PanelSectionHeader href="/todos" title="Slack" label="Slack" />
       <ul className="space-y-2">
         {threads.slice(0, 3).map((t) => {
           const channel = t.channelName ? `#${t.channelName}` : "DM";
           const lastMsg = t.messages[t.messages.length - 1];
           const participants = [...new Set(t.messages.map((m) => m.userName))];
           return (
-            <li key={`${t.channelId}:${t.threadTs}`} className="min-w-0">
+            <li key={`${t.channelId}:${t.threadTs}`} className="min-w-0 rounded-xl bg-foreground-100/[0.03] px-3 py-2.5">
               <div className="flex items-center gap-1.5">
-                <span className="text-[11px] font-medium text-foreground-100/60 shrink-0">{channel}</span>
-                <span className="text-foreground-100/15 text-[10px]">&middot;</span>
+                <span className="shrink-0 text-[11px] font-medium text-foreground-100/60">{channel}</span>
+                <span className="text-[10px] text-foreground-100/15">&middot;</span>
                 <span className="truncate text-[12px] text-foreground-200">
                   {participants.join(", ")}
                 </span>
@@ -1038,7 +1248,10 @@ function SlackWidget({ threads }: { threads: SlackThread[] }) {
           );
         })}
       </ul>
-    </WidgetCard>
+      <p className="mt-4 text-center text-[12px] text-foreground-300/40">
+        {threads.length === 1 ? "1 thread" : `${threads.length} threads`}
+      </p>
+    </div>
   );
 }
 
@@ -1046,7 +1259,6 @@ function SlackWidget({ threads }: { threads: SlackThread[] }) {
 
 function ChatsWidget({
   conversations,
-  userId,
 }: {
   conversations: ConversationSummary[];
   userId: string;
@@ -1054,30 +1266,27 @@ function ChatsWidget({
   const recent = conversations.slice(0, 4);
 
   return (
-    <WidgetCard href="/todos?panel=chats">
-      <WidgetHeader
-        icon={
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-        }
-        label="Chats"
-        count={conversations.length || undefined}
-      />
+    <div className="col-span-2">
+      <PanelSectionHeader href="/todos?panel=chats" title="Chats" label="Chats" />
       {recent.length > 0 ? (
-        <ul className="space-y-1.5">
+        <ul className="space-y-1">
           {recent.map((c) => (
-            <li key={c.id} className="flex items-baseline gap-2">
-              <span className="text-[13px] text-foreground-200 truncate line-clamp-1">
+            <li key={c.id} className="rounded-xl px-2 py-2.5 transition-colors hover:bg-foreground-100/[0.03]">
+              <span className="line-clamp-1 truncate text-[13px] text-foreground-200">
                 {c.title}
               </span>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="text-[13px] text-foreground-300/50">No conversations yet</p>
+        <p className="py-4 text-center text-[13px] text-foreground-300/50">No conversations yet</p>
       )}
-    </WidgetCard>
+      {conversations.length > 0 && (
+        <p className="mt-4 text-center text-[12px] text-foreground-300/40">
+          {conversations.length === 1 ? "1 conversation" : `${conversations.length} conversations`}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -1142,10 +1351,12 @@ function DotIndicator({
   });
 
   return (
-    <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-2">
-      {Array.from({ length: count }, (_, i) => (
-        <CarouselDot key={i} index={i} progress={progress} onTap={() => onSelectPage(i)} />
-      ))}
+    <div className="absolute inset-x-4 bottom-3 flex items-center justify-center">
+      <div className="flex items-center gap-2 rounded-full border border-foreground-100/8 bg-background-100/70 px-3 py-2 shadow-lg shadow-black/10 backdrop-blur-xl">
+        {Array.from({ length: count }, (_, i) => (
+          <CarouselDot key={i} index={i} progress={progress} onTap={() => onSelectPage(i)} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -1216,7 +1427,7 @@ function CarouselPageWrapper({
 
   return (
     <motion.div
-      className="h-full shrink-0 overflow-y-auto overscroll-contain px-2.5"
+      className="h-full shrink-0 overflow-y-auto overscroll-contain px-2"
       style={{
         width: pageWidth || "100%",
         scale,
@@ -1224,8 +1435,8 @@ function CarouselPageWrapper({
         opacity: pageOpacity,
       }}
     >
-      <div className="pb-4">
-        {page.content}
+      <div className="pb-16 pt-1">
+        <HomePanel>{page.content}</HomePanel>
       </div>
     </motion.div>
   );
