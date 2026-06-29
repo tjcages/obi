@@ -24,6 +24,7 @@ export interface UnifiedInputProps {
   onStartConversation: (title: string, prompt: string) => void;
   onCreateTodo: (params: CreateTodoParams) => void;
   onSaveCategories?: (categories: string[]) => Promise<void>;
+  onUploadFiles?: (files: File[], categories: string[]) => Promise<void>;
   todoPanelOpen: boolean;
   onOpenTodoPanel: () => void;
   floating?: boolean;
@@ -36,6 +37,7 @@ export function UnifiedInput({
   onStartConversation,
   onCreateTodo,
   onSaveCategories,
+  onUploadFiles,
   todoPanelOpen,
   onOpenTodoPanel,
   floating = false,
@@ -54,6 +56,9 @@ export function UnifiedInput({
   const [addingCategory, setAddingCategory] = useState(false);
   const [newCatName, setNewCatName] = useState("");
   const newCatInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [stagedFiles, setStagedFiles] = useState<File[]>([]);
+  const [dragging, setDragging] = useState(false);
   const { contacts, searchContacts, searchEmails } = useSmartInput();
   const [sheetExpanded, setSheetExpanded] = useState(false);
 
@@ -66,44 +71,66 @@ export function UnifiedInput({
     setInputEntities(entities);
   }, []);
 
+  const handleCategoriesDetected = useCallback((detected: string[]) => {
+    setSelectedCategories(detected);
+  }, []);
+
+  const stageFiles = useCallback((files: FileList | File[]) => {
+    setStagedFiles((prev) => [...prev, ...Array.from(files)]);
+    setSheetExpanded(true);
+  }, []);
+
+  const resolveUploadCategories = useCallback(() => {
+    if (selectedCategories.length > 0) return selectedCategories;
+    if (lastUsedCategory) return [lastUsedCategory];
+    return categories.slice(0, 1);
+  }, [selectedCategories, lastUsedCategory, categories]);
+
   const handleSmartSubmit = useCallback(
-    (text: string, entities: SmartEntity[]) => {
-      if (!text.trim()) return;
-      if (inputMode === "todo") {
-        const cats = selectedCategories.length > 0
-          ? selectedCategories
-          : undefined;
-        const sourceEmails = entitiesToSourceEmails(entities);
-        const todoEntities: TodoEntity[] = entities.map((e) => {
-          if (e.type === "person") return { type: "person", name: e.name, email: e.email };
-          if (e.type === "email") return { type: "email", id: e.id, threadId: e.threadId, subject: e.subject, from: e.from };
-          if (e.type === "category") return { type: "category", name: e.name };
-          return { type: "link", url: e.url };
-        });
-        onCreateTodo({
-          title: text,
-          scheduledDate: scheduledDate ?? undefined,
-          categories: cats,
-          sourceEmails: sourceEmails.length > 0 ? sourceEmails : undefined,
-          entities: todoEntities.length > 0 ? todoEntities : undefined,
-        });
-        if (!todoPanelOpen) onOpenTodoPanel();
-      } else {
-        onStartConversation(buildConversationTitle(text), text);
+    async (text: string, entities: SmartEntity[]) => {
+      const trimmed = text.trim();
+      if (!trimmed && stagedFiles.length === 0) return;
+
+      const uploadCategories = resolveUploadCategories();
+      if (stagedFiles.length > 0 && onUploadFiles && uploadCategories.length > 0) {
+        await onUploadFiles(stagedFiles, uploadCategories);
       }
+
+      if (trimmed) {
+        if (inputMode === "todo") {
+          const cats = selectedCategories.length > 0
+            ? selectedCategories
+            : undefined;
+          const sourceEmails = entitiesToSourceEmails(entities);
+          const todoEntities: TodoEntity[] = entities.map((e) => {
+            if (e.type === "person") return { type: "person", name: e.name, email: e.email };
+            if (e.type === "email") return { type: "email", id: e.id, threadId: e.threadId, subject: e.subject, from: e.from };
+            if (e.type === "category") return { type: "category", name: e.name };
+            return { type: "link", url: e.url };
+          });
+          onCreateTodo({
+            title: trimmed,
+            scheduledDate: scheduledDate ?? undefined,
+            categories: cats,
+            sourceEmails: sourceEmails.length > 0 ? sourceEmails : undefined,
+            entities: todoEntities.length > 0 ? todoEntities : undefined,
+          });
+          if (!todoPanelOpen) onOpenTodoPanel();
+        } else {
+          onStartConversation(buildConversationTitle(trimmed), trimmed);
+        }
+      }
+
       setInputValue("");
       setInputEntities([]);
+      setStagedFiles([]);
       setSelectedCategories([]);
       setScheduledDate(localISODate(new Date()));
       setDateExplicit(false);
       if (floating) setSheetExpanded(false);
     },
-    [inputMode, selectedCategories, scheduledDate, onStartConversation, onCreateTodo, todoPanelOpen, onOpenTodoPanel, floating],
+    [inputMode, selectedCategories, scheduledDate, onStartConversation, onCreateTodo, todoPanelOpen, onOpenTodoPanel, floating, stagedFiles, onUploadFiles, resolveUploadCategories],
   );
-
-  const handleCategoriesDetected = useCallback((detected: string[]) => {
-    setSelectedCategories(detected);
-  }, []);
 
   if (floating) {
     const sheetFocused = sheetExpanded;
@@ -118,12 +145,19 @@ export function UnifiedInput({
     return (
       <div
         className="fixed inset-x-0 bottom-0 z-50 px-3 pb-1"
-        style={{ paddingBottom: "max(4px, env(safe-area-inset-bottom))" }}
+        style={{ paddingBottom: "max(8px, env(safe-area-inset-bottom))" }}
         onFocusCapture={() => setSheetExpanded(true)}
         onBlurCapture={(e) => {
           const related = e.relatedTarget as Node | null;
           if (related && e.currentTarget.contains(related)) return;
           setSheetExpanded(false);
+        }}
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragging(false);
+          if (e.dataTransfer.files.length > 0) stageFiles(e.dataTransfer.files);
         }}
       >
         <motion.div
@@ -139,46 +173,105 @@ export function UnifiedInput({
           }}
           className={cn(
             "overflow-hidden rounded-[22px]",
-            "bg-background-200/75 dark:bg-[#1c1c1e]/80",
+            "bg-background-200/90 dark:bg-[#242424]/92",
             "backdrop-blur-2xl backdrop-saturate-[1.8]",
-            "border border-border-100/40 dark:border-white/[0.12]",
-            "shadow-[0_4px_30px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_30px_rgba(0,0,0,0.3)]",
+            "border border-border-100 dark:border-white/[0.1]",
+            "shadow-[0_4px_30px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_30px_rgba(0,0,0,0.35)]",
+            dragging && "ring-2 ring-foreground-100/10",
           )}
           transition={{
             layout: { type: "spring", stiffness: 400, damping: 32 },
           }}
         >
-          {/* Input field — always visible, tap to focus directly */}
+          {stagedFiles.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto px-3 pt-3 scrollbar-none">
+              {stagedFiles.map((file, i) => (
+                <div key={`${file.name}-${i}`} className="relative shrink-0">
+                  {file.type.startsWith("image/") ? (
+                    <img
+                      src={URL.createObjectURL(file)}
+                      alt=""
+                      className="h-14 w-14 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-foreground-100/5 text-[10px] text-foreground-300/60">
+                      {file.name.slice(0, 8)}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setStagedFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                    className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-foreground-100 text-background-100"
+                    aria-label="Remove attachment"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="px-2 pt-2">
             <motion.div
               className={cn(
                 "overflow-hidden rounded-2xl",
                 "bg-background-100/80 dark:bg-white/[0.06]",
-                "border transition-colors",
-                inputMode === "chat"
-                  ? "border-accent-100/15"
-                  : "border-border-100/30 dark:border-white/[0.06]",
+                "border border-border-100 dark:border-white/[0.08]",
               )}
-              animate={{ minHeight: sheetFocused ? 80 : 44 }}
+              animate={{ minHeight: sheetFocused ? 120 : 52 }}
               transition={{ type: "spring", stiffness: 400, damping: 30 }}
             >
               <SmartInput
                 onChange={handleSmartInputChange}
                 onSubmit={handleSmartSubmit}
-                placeholder={inputMode === "chat" ? "Ask about your inbox..." : "Add a to-do..."}
+                multiline={sheetFocused}
+                placeholder="Add a to-do, drop images, or ask anything…"
                 categories={inputMode === "todo" ? categories : []}
                 contacts={contacts}
                 onSearchContacts={searchContacts}
                 onSearchEmails={searchEmails}
                 onCategoriesDetected={inputMode === "todo" ? handleCategoriesDetected : undefined}
-                className="w-full py-2.5 pl-4 pr-3 text-[15px]"
+                className={cn(
+                  "w-full pl-4 pr-3",
+                  sheetFocused ? "min-h-[120px] py-3 text-[15px]" : "py-3.5 text-[15px]",
+                )}
               />
             </motion.div>
           </div>
 
-          {/* Toolbar — mode toggle + date picker */}
-          <div className="flex items-center gap-3 px-3 py-2.5">
+          <div className="flex items-center gap-2 px-3 py-2.5">
             <ModeToggle mode={inputMode} onModeChange={setInputMode} tabIndex={-1} size="lg" />
+            {onUploadFiles && (
+              <>
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl text-foreground-300/70 transition-colors hover:bg-foreground-100/5 hover:text-foreground-200"
+                  aria-label="Attach image or file"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                    <circle cx="9" cy="9" r="2" />
+                    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                  </svg>
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files?.length) stageFiles(e.target.files);
+                    e.target.value = "";
+                  }}
+                />
+              </>
+            )}
             <div className="flex-1" />
             {inputMode === "todo" && (
               <DateQuickPicker

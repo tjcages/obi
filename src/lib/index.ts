@@ -73,6 +73,7 @@ export {
   setCustomCategoryColors,
   CATEGORY_COLORS,
   type CategoryColor,
+  uploadFilesToCategories,
 } from "./_utils";
 export { useResizablePanel } from "./_use-resizable-panel";
 export { useUndoRedo, type UndoEntry } from "./_use-undo-redo";

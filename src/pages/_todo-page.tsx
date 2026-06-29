@@ -24,7 +24,7 @@ import { Drawer } from "../components/ui/_drawer";
 import { useNavStackContext } from "../components/nav-stack";
 import type { ComposeMode } from "../components/email/_email-modal";
 import type { TodoSlackRef } from "../lib";
-import { cn, useMediaQuery, useTodos, useSuggestions, useConversations, useAccounts, useScan, useWorkspace, useResizablePanel, useUndoRedo, setCustomCategoryColors, getCategoryColor, type TodoItem, type FeedItem } from "../lib";
+import { cn, useMediaQuery, useTodos, useSuggestions, useConversations, useAccounts, useScan, useWorkspace, useResizablePanel, useUndoRedo, setCustomCategoryColors, getCategoryColor, uploadFilesToCategories, type TodoItem, type FeedItem } from "../lib";
 
 // function formatScanAge(iso: string): string {
 //   const diffMs = Date.now() - new Date(iso).getTime();
@@ -1169,6 +1169,9 @@ export default function TodoPage({ userId }: TodoPageProps) {
           onStartConversation={handleStartConversation}
           onCreateTodo={(params) => void todoState.createTodo({ ...params, scheduledDate: params.scheduledDate ?? selectedCalDate ?? undefined })}
           onSaveCategories={todoState.saveCategories}
+          onUploadFiles={async (files, cats) => {
+            await uploadFilesToCategories(files, cats);
+          }}
           todoPanelOpen={todoPanelOpen}
           onOpenTodoPanel={() => setTodoPanelOpen(true)}
           floating

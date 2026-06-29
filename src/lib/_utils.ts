@@ -89,3 +89,16 @@ export function setMonoCategories(enabled: boolean) {
   localStorage.setItem(MONO_CATEGORIES_KEY, String(enabled));
   window.dispatchEvent(new CustomEvent(MONO_CATEGORIES_CHANGE));
 }
+
+export async function uploadFilesToCategories(files: File[], categories: string[]) {
+  for (const category of categories) {
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append("file", file);
+      await fetch(`/api/workspace/${encodeURIComponent(category)}/upload`, {
+        method: "POST",
+        body: formData,
+      });
+    }
+  }
+}
