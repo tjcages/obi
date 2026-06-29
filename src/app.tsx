@@ -5,6 +5,7 @@ import { Toaster } from "sonner";
 import { subscribeTheme, getTheme } from "./components";
 import { NavStack, useNavStack } from "./components/nav-stack";
 import { Landing, DashboardPage, InboxPage, ProjectPage, ProjectsPage, TodoPage, InternalsPage, SettingsPage } from "./pages";
+import { FloatingInputProvider } from "./components/layout";
 
 type Auth = { status: "ok"; userId: string } | { status: "unauthenticated" };
 
@@ -61,8 +62,11 @@ export default function App({
 
   const canUseAppNav = isAuthenticated && isMobile && pathname !== "/settings" && pathname !== "/internals";
 
+  const showFloatingInput = isAuthenticated && pathname !== "/settings" && pathname !== "/internals";
+
   return (
     <>
+      <FloatingInputProvider userId={userId} enabled={showFloatingInput}>
       {canUseAppNav ? (
         <NavStack
           nav={appNav}
@@ -91,6 +95,7 @@ export default function App({
       ) : (
         content
       )}
+      </FloatingInputProvider>
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 h-16 bg-gradient-to-t from-background-100 to-transparent" />
       <Toaster
         position={isMobile ? "top-center" : "bottom-left"}

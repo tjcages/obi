@@ -7,6 +7,7 @@ import {
   type InboxListHandle,
   type ThreadGroup,
 } from "../components";
+import { useFloatingInputBlockerEffect } from "../components/layout";
 import { useNavStackContext } from "../components/nav-stack";
 import type { ComposeMode } from "../components/email/_email-modal";
 import { cn, useAccounts, useUndoRedo } from "../lib";
@@ -95,8 +96,10 @@ export default function InboxPage({ userId }: InboxPageProps) {
 
   const emailModalOpen = !!selectedThreadId;
 
+  useFloatingInputBlockerEffect(emailModalOpen, "email-modal");
+
   return (
-    <div className={cn("bg-background-100 text-foreground-100", !navCtx && "h-dvh overflow-y-auto")}>
+    <div className={cn("bg-background-100 text-foreground-100", !navCtx && "h-dvh overflow-y-auto", navCtx && "pb-36")}>
       {!navCtx && (
         <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border-100/60 bg-background-100/80 px-4 py-2.5 backdrop-blur-lg lg:px-5 lg:py-3">
           <div className="flex items-center gap-2">

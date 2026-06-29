@@ -6,20 +6,17 @@ import {
   useAccounts,
   useConversations,
   useIsMobile,
-  useSuggestions,
   useTodos,
   getCategoryColor,
   setCustomCategoryColors,
-  uploadFilesToCategories,
   type CategoryWorkspace as WorkspaceData,
   type ConversationSummary,
   type FeedItem,
   type TodoItem,
   type TodoSlackRef,
 } from "../lib";
-import { buildConversationTitle } from "../lib/_conversations";
-import { UnifiedInput } from "../components/layout";
 import { ProfileButton } from "../components/ui";
+import { useFloatingInputBlockerEffect } from "../components/layout";
 import { ThemeToggle } from "../components/ui/_theme-toggle";
 import { SwipeableEmailRow } from "../components/ui/_swipeable-email-row";
 import { EmailModal } from "../components/email/_email-modal";
@@ -1557,21 +1554,9 @@ export default function DashboardPage({ userId }: DashboardPageProps) {
   const accounts = useAccounts();
   const todoState = useTodos();
   const conv = useConversations({ userId });
-  const suggestions = useSuggestions();
   const inbox = useInboxPreview();
   const slack = useSlackPreview();
   const isMobile = useIsMobile();
-
-  const handleStartConversation = useCallback(
-    (title: string, prompt: string) => {
-      conv.startConversation(title, prompt);
-    },
-    [conv.startConversation],
-  );
-
-  const handleUploadFiles = useCallback(async (files: File[], cats: string[]) => {
-    await uploadFilesToCategories(files, cats);
-  }, []);
 
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [selectedAccountEmail, setSelectedAccountEmail] = useState<string | undefined>(undefined);
@@ -1746,21 +1731,6 @@ export default function DashboardPage({ userId }: DashboardPageProps) {
         slackRef={slackModalRef?.[0] ?? null}
         onDismiss={() => setSlackModalRef(null)}
       />
-
-      {isMobile && (
-        <UnifiedInput
-          suggestions={suggestions}
-          categories={categories}
-          lastUsedCategory={todoState.lastUsedCategory}
-          onStartConversation={handleStartConversation}
-          onCreateTodo={(params) => void todoState.createTodo(params)}
-          onSaveCategories={todoState.saveCategories}
-          onUploadFiles={handleUploadFiles}
-          todoPanelOpen
-          onOpenTodoPanel={() => {}}
-          floating
-        />
-      )}
     </div>
   );
 }

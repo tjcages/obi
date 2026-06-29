@@ -310,7 +310,7 @@ export default function ProjectsPage(_props: { userId: string }) {
   const hasAnyContent = timeline.length > 0 || todoGroups.length > 0;
 
   return (
-    <div className={cn("bg-background-100 text-foreground-100", !navCtx && "h-dvh overflow-y-auto")}>
+    <div className={cn("bg-background-100 text-foreground-100", !navCtx && "h-dvh overflow-y-auto", navCtx && "pb-36")}>
       {/* Header */}
       <header className={cn("mx-auto flex w-full max-w-2xl items-center px-4 sm:px-6", navCtx ? "justify-end pt-2 pb-1" : "justify-between pt-8 pb-2")}>
         {!navCtx && (

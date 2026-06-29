@@ -19,6 +19,7 @@ import {
   type TodoItem,
   type TodoSlackRef,
 } from "../lib";
+import { useFloatingInputCategory, useFloatingInputBlockerEffect } from "../components/layout";
 import type { ComposeMode } from "../components/email/_email-modal";
 import { parseSenderName } from "../components/email/_email-row";
 
@@ -39,10 +40,14 @@ export default function ProjectPage({ userId, projectName: projectNameProp }: Pr
   const workspace = useWorkspace(projectName);
   const isMobile = useIsMobile();
 
+  useFloatingInputCategory(projectName);
+
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [selectedAccountEmail, setSelectedAccountEmail] = useState<string | undefined>(undefined);
   const [initialComposeMode, setInitialComposeMode] = useState<ComposeMode | undefined>(undefined);
   const [slackModalRef, setSlackModalRef] = useState<TodoSlackRef[] | null>(null);
+
+  useFloatingInputBlockerEffect(!!selectedThreadId, "email-modal");
 
   useEffect(() => {
     setCustomCategoryColors(todoState.preferences.categoryColors ?? {});

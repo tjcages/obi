@@ -101,4 +101,61 @@ export async function uploadFilesToCategories(files: File[], categories: string[
       });
     }
   }
+  if (categories.length > 0) {
+    window.dispatchEvent(new CustomEvent("workspace-feed-changed", { detail: { category: categories[0] } }));
+  }
+}
+
+export async function addNoteToCategory(category: string, content: string) {
+  const res = await fetch(`/api/workspace/${encodeURIComponent(category)}/feed`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "note", content }),
+  });
+  if (res.ok) {
+    window.dispatchEvent(new CustomEvent("workspace-feed-changed", { detail: { category } }));
+  }
+}
+
+export async function addLinkToCategory(category: string, url: string) {
+  let linkRef: {
+    url: string;
+    title: string;
+    description?: string;
+    favicon?: string;
+    image?: string;
+  } = { url, title: url };
+
+  try {
+    const preview = await fetch(`/api/link-preview?url=${encodeURIComponent(url)}`);
+    if (preview.ok) {
+      const data = await preview.json() as Record<string, string | null>;
+      linkRef = {
+        url,
+        title: data.title || url,
+        description: data.description || undefined,
+        favicon: data.favicon || undefined,
+        image: data.image || undefined,
+      };
+    }
+  } catch {
+    /* use basic metadata */
+  }
+
+  if (!linkRef.title || linkRef.title === url) {
+    try { linkRef.title = new URL(url).hostname; } catch { /* keep url */ }
+  }
+  if (!linkRef.favicon) {
+    try { linkRef.favicon = `https://icons.duckduckgo.com/ip3/${new URL(url).hostname}.ico`; } catch { /* skip */ }
+  }
+
+  await fetch(`/api/workspace/${encodeURIComponent(category)}/feed`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "link", linkRef }),
+  }).then((res) => {
+    if (res.ok) {
+      window.dispatchEvent(new CustomEvent("workspace-feed-changed", { detail: { category } }));
+    }
+  });
 }

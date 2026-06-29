@@ -4,3 +4,11 @@ export { Header } from "./_header";
 export { MemoryPanel, MemoryToggleButton } from "./_memory-panel";
 export { SlackSidebar } from "./_slack-sidebar";
 export { UnifiedInput, type UnifiedInputProps } from "./_unified-input";
+export {
+  FloatingInputProvider,
+  useFloatingInput,
+  useFloatingInputOptional,
+  useFloatingInputBlockerEffect,
+  useFloatingInputCategory,
+  useFloatingInputScheduledDate,
+} from "./_floating-input-provider";

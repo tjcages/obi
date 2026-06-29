@@ -74,7 +74,15 @@ export {
   CATEGORY_COLORS,
   type CategoryColor,
   uploadFilesToCategories,
+  addNoteToCategory,
+  addLinkToCategory,
 } from "./_utils";
+export {
+  cycleIntent,
+  inferInputIntent,
+  intentLabel,
+  type InputIntent,
+} from "./_infer-input-intent";
 export { useResizablePanel } from "./_use-resizable-panel";
 export { useUndoRedo, type UndoEntry } from "./_use-undo-redo";
 export {

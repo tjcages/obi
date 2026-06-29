@@ -20,11 +20,16 @@ import {
   type InboxListHandle,
   type ThreadGroup,
 } from "../components";
+import {
+  useFloatingInputBlockerEffect,
+  useFloatingInputCategory,
+  useFloatingInputScheduledDate,
+} from "../components/layout";
 import { Drawer } from "../components/ui/_drawer";
 import { useNavStackContext } from "../components/nav-stack";
 import type { ComposeMode } from "../components/email/_email-modal";
 import type { TodoSlackRef } from "../lib";
-import { cn, useMediaQuery, useTodos, useSuggestions, useConversations, useAccounts, useScan, useWorkspace, useResizablePanel, useUndoRedo, setCustomCategoryColors, getCategoryColor, uploadFilesToCategories, type TodoItem, type FeedItem } from "../lib";
+import { cn, useMediaQuery, useTodos, useSuggestions, useConversations, useAccounts, useScan, useWorkspace, useResizablePanel, useUndoRedo, setCustomCategoryColors, getCategoryColor, uploadFilesToCategories, addLinkToCategory, addNoteToCategory, type TodoItem, type FeedItem } from "../lib";
 
 // function formatScanAge(iso: string): string {
 //   const diffMs = Date.now() - new Date(iso).getTime();
@@ -739,6 +744,11 @@ export default function TodoPage({ userId }: TodoPageProps) {
   const emailModalOpen = !!selectedThreadId;
   const showRightColumn = isWideDesktop && !chatPanelOpen;
 
+  useFloatingInputBlockerEffect(chatPanelOpen, "chat-overlay");
+  useFloatingInputBlockerEffect(emailModalOpen, "email-modal");
+  useFloatingInputCategory(activeCategoryWorkspace);
+  useFloatingInputScheduledDate(selectedCalDate);
+
   return (
     <div className={cn("flex flex-col bg-background-100 text-foreground-100", navCtx ? "h-full" : "h-dvh")}>
       <Header
@@ -964,11 +974,17 @@ export default function TodoPage({ userId }: TodoPageProps) {
                   suggestions={suggestions}
                   categories={todoState.preferences.todoCategories ?? []}
                   lastUsedCategory={todoState.lastUsedCategory}
+                  activeCategory={activeCategoryWorkspace}
+                  scheduledDateOverride={selectedCalDate}
                   onStartConversation={handleStartConversation}
                   onCreateTodo={(params) => void todoState.createTodo({ ...params, scheduledDate: params.scheduledDate ?? selectedCalDate ?? undefined })}
                   onSaveCategories={todoState.saveCategories}
+                  onUploadFiles={async (files, cats) => { await uploadFilesToCategories(files, cats); }}
+                  onAddNote={async (content, category) => { await addNoteToCategory(category, content); }}
+                  onAddLink={async (url, category) => { await addLinkToCategory(category, url); }}
                   todoPanelOpen={todoPanelOpen}
                   onOpenTodoPanel={() => setTodoPanelOpen(true)}
+                  smartMode
                 />
               )}
 
@@ -1160,23 +1176,6 @@ export default function TodoPage({ userId }: TodoPageProps) {
         </Drawer>
       )}
 
-      {/* Mobile floating bottom sheet input */}
-      {!isDesktop && !activeCategoryWorkspace && !chatPanelOpen && (
-        <UnifiedInput
-          suggestions={suggestions}
-          categories={todoState.preferences.todoCategories ?? []}
-          lastUsedCategory={todoState.lastUsedCategory}
-          onStartConversation={handleStartConversation}
-          onCreateTodo={(params) => void todoState.createTodo({ ...params, scheduledDate: params.scheduledDate ?? selectedCalDate ?? undefined })}
-          onSaveCategories={todoState.saveCategories}
-          onUploadFiles={async (files, cats) => {
-            await uploadFilesToCategories(files, cats);
-          }}
-          todoPanelOpen={todoPanelOpen}
-          onOpenTodoPanel={() => setTodoPanelOpen(true)}
-          floating
-        />
-      )}
     </div>
   );
 }

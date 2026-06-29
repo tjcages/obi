@@ -91,6 +91,16 @@ export function useWorkspace(category: string | null): UseWorkspaceReturn {
     }
   }, [category, refresh]);
 
+  useEffect(() => {
+    if (!category) return;
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ category?: string }>).detail;
+      if (detail?.category === category) void refresh();
+    };
+    window.addEventListener("workspace-feed-changed", handler);
+    return () => window.removeEventListener("workspace-feed-changed", handler);
+  }, [category, refresh]);
+
   const addNote = useCallback(async (content: string): Promise<FeedItem | null> => {
     if (!category) return null;
 

@@ -1,6 +1,6 @@
-import { type Dispatch, type RefObject, type SetStateAction, useCallback, useEffect, useRef, useState } from "react";
+import { type Dispatch, type RefObject, type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { cn, getCategoryColor, useIsMobile, useSmartInput } from "../../lib";
+import { cn, getCategoryColor, useIsMobile, useSmartInput, inferInputIntent, cycleIntent, intentLabel, type InputIntent } from "../../lib";
 import { ScrollFade } from "../ui";
 import type { TodoEmailRef, TodoEntity } from "../../lib";
 import { buildConversationTitle } from "../../lib/_conversations";
@@ -21,12 +21,17 @@ export interface UnifiedInputProps {
   suggestions?: string[];
   categories?: string[];
   lastUsedCategory?: string | null;
+  activeCategory?: string | null;
+  scheduledDateOverride?: string | null;
   onStartConversation: (title: string, prompt: string) => void;
   onCreateTodo: (params: CreateTodoParams) => void;
   onSaveCategories?: (categories: string[]) => Promise<void>;
   onUploadFiles?: (files: File[], categories: string[]) => Promise<void>;
+  onAddNote?: (content: string, category: string) => Promise<void>;
+  onAddLink?: (url: string, category: string) => Promise<void>;
   todoPanelOpen: boolean;
   onOpenTodoPanel: () => void;
+  smartMode?: boolean;
   floating?: boolean;
 }
 
@@ -34,18 +39,24 @@ export function UnifiedInput({
   suggestions = [],
   categories = [],
   lastUsedCategory,
+  activeCategory = null,
+  scheduledDateOverride,
   onStartConversation,
   onCreateTodo,
   onSaveCategories,
   onUploadFiles,
+  onAddNote,
+  onAddLink,
   todoPanelOpen,
   onOpenTodoPanel,
+  smartMode = false,
   floating = false,
 }: UnifiedInputProps) {
   const [inputValue, setInputValue] = useState("");
   const [inputEntities, setInputEntities] = useState<SmartEntity[]>([]);
   const isMobile = useIsMobile();
   const [inputMode, setInputMode] = useState<InputMode>("todo");
+  const [intentOverride, setIntentOverride] = useState<InputIntent | null>(null);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
     lastUsedCategory ? [lastUsedCategory] : [],
   );
@@ -66,6 +77,24 @@ export function UnifiedInput({
     if (addingCategory && newCatInputRef.current) newCatInputRef.current.focus();
   }, [addingCategory]);
 
+  useEffect(() => {
+    if (scheduledDateOverride != null) setScheduledDate(scheduledDateOverride);
+  }, [scheduledDateOverride]);
+
+  const hasActiveProject = !!(activeCategory ?? selectedCategories[0] ?? lastUsedCategory);
+
+  const effectiveIntent = useMemo((): InputIntent => {
+    if (smartMode && intentOverride) return intentOverride;
+    if (smartMode) {
+      return inferInputIntent(inputValue, {
+        hasEmailEntities: inputEntities.some((e) => e.type === "email"),
+        hasActiveProject: hasActiveProject,
+        multiline: inputValue.includes("\n"),
+      });
+    }
+    return inputMode === "chat" ? "chat" : "todo";
+  }, [smartMode, intentOverride, inputValue, inputEntities, hasActiveProject, inputMode]);
+
   const handleSmartInputChange = useCallback((text: string, entities: SmartEntity[]) => {
     setInputValue(text);
     setInputEntities(entities);
@@ -81,10 +110,15 @@ export function UnifiedInput({
   }, []);
 
   const resolveUploadCategories = useCallback(() => {
+    if (activeCategory) return [activeCategory];
     if (selectedCategories.length > 0) return selectedCategories;
     if (lastUsedCategory) return [lastUsedCategory];
     return categories.slice(0, 1);
-  }, [selectedCategories, lastUsedCategory, categories]);
+  }, [activeCategory, selectedCategories, lastUsedCategory, categories]);
+
+  const resolvePrimaryCategory = useCallback(() => {
+    return activeCategory ?? selectedCategories[0] ?? lastUsedCategory ?? categories[0] ?? null;
+  }, [activeCategory, selectedCategories, lastUsedCategory, categories]);
 
   const handleSmartSubmit = useCallback(
     async (text: string, entities: SmartEntity[]) => {
@@ -97,10 +131,21 @@ export function UnifiedInput({
       }
 
       if (trimmed) {
-        if (inputMode === "todo") {
+        const primaryCategory = resolvePrimaryCategory();
+        const intent = effectiveIntent;
+
+        if (intent === "chat") {
+          onStartConversation(buildConversationTitle(trimmed), trimmed);
+        } else if (intent === "note" && primaryCategory && onAddNote) {
+          await onAddNote(trimmed, primaryCategory);
+        } else if (intent === "link" && primaryCategory && onAddLink) {
+          await onAddLink(trimmed, primaryCategory);
+        } else {
           const cats = selectedCategories.length > 0
             ? selectedCategories
-            : undefined;
+            : primaryCategory
+              ? [primaryCategory]
+              : undefined;
           const sourceEmails = entitiesToSourceEmails(entities);
           const todoEntities: TodoEntity[] = entities.map((e) => {
             if (e.type === "person") return { type: "person", name: e.name, email: e.email };
@@ -116,8 +161,6 @@ export function UnifiedInput({
             entities: todoEntities.length > 0 ? todoEntities : undefined,
           });
           if (!todoPanelOpen) onOpenTodoPanel();
-        } else {
-          onStartConversation(buildConversationTitle(trimmed), trimmed);
         }
       }
 
@@ -125,12 +168,35 @@ export function UnifiedInput({
       setInputEntities([]);
       setStagedFiles([]);
       setSelectedCategories([]);
-      setScheduledDate(localISODate(new Date()));
+      setIntentOverride(null);
+      setScheduledDate(scheduledDateOverride ?? localISODate(new Date()));
       setDateExplicit(false);
       if (floating) setSheetExpanded(false);
     },
-    [inputMode, selectedCategories, scheduledDate, onStartConversation, onCreateTodo, todoPanelOpen, onOpenTodoPanel, floating, stagedFiles, onUploadFiles, resolveUploadCategories],
+    [
+      effectiveIntent,
+      selectedCategories,
+      scheduledDate,
+      scheduledDateOverride,
+      onStartConversation,
+      onCreateTodo,
+      onAddNote,
+      onAddLink,
+      todoPanelOpen,
+      onOpenTodoPanel,
+      floating,
+      stagedFiles,
+      onUploadFiles,
+      resolveUploadCategories,
+      resolvePrimaryCategory,
+    ],
   );
+
+  const unifiedPlaceholder = activeCategory
+    ? `Add to ${activeCategory}, drop images, or ask anything…`
+    : "Add a to-do, drop images, or ask anything…";
+
+  const showCategoryDetection = smartMode || inputMode === "todo";
 
   if (floating) {
     const sheetFocused = sheetExpanded;
@@ -228,12 +294,12 @@ export function UnifiedInput({
                 onChange={handleSmartInputChange}
                 onSubmit={handleSmartSubmit}
                 multiline={sheetFocused}
-                placeholder="Add a to-do, drop images, or ask anything…"
-                categories={inputMode === "todo" ? categories : []}
+                placeholder={unifiedPlaceholder}
+                categories={showCategoryDetection ? categories : []}
                 contacts={contacts}
                 onSearchContacts={searchContacts}
                 onSearchEmails={searchEmails}
-                onCategoriesDetected={inputMode === "todo" ? handleCategoriesDetected : undefined}
+                onCategoriesDetected={showCategoryDetection ? handleCategoriesDetected : undefined}
                 className={cn(
                   "w-full pl-4 pr-3",
                   sheetFocused ? "min-h-[120px] py-3 text-[15px]" : "py-3.5 text-[15px]",
@@ -243,7 +309,15 @@ export function UnifiedInput({
           </div>
 
           <div className="flex items-center gap-2 px-3 py-2.5">
-            <ModeToggle mode={inputMode} onModeChange={setInputMode} tabIndex={-1} size="lg" />
+            {smartMode ? (
+              <IntentChip
+                intent={effectiveIntent}
+                onCycle={() => setIntentOverride(cycleIntent(effectiveIntent, hasActiveProject))}
+                size="lg"
+              />
+            ) : (
+              <ModeToggle mode={inputMode} onModeChange={setInputMode} tabIndex={-1} size="lg" />
+            )}
             {onUploadFiles && (
               <>
                 <button
@@ -273,7 +347,7 @@ export function UnifiedInput({
               </>
             )}
             <div className="flex-1" />
-            {inputMode === "todo" && (
+            {effectiveIntent === "todo" && (
               <DateQuickPicker
                 currentDate={scheduledDate}
                 onSelect={(d) => { setScheduledDate(d); setDateExplicit(true); }}
@@ -299,29 +373,24 @@ export function UnifiedInput({
       <div
         className={cn(
           "rounded-2xl border bg-background-200 transition-all focus-within:bg-background-100 focus-within:shadow-lg",
-          inputMode === "chat"
-            ? "border-accent-100/25 focus-within:border-accent-100"
-            : "border-border-100 focus-within:border-foreground-300",
+          smartMode || inputMode === "todo"
+            ? "border-border-100 focus-within:border-foreground-300"
+            : "border-accent-100/25 focus-within:border-accent-100",
         )}
       >
         <SmartInput
           onChange={handleSmartInputChange}
           onSubmit={handleSmartSubmit}
-          placeholder={
-            inputMode === "chat"
-              ? "Ask about your inbox..."
-              : "Add a to-do..."
-          }
-          categories={inputMode === "todo" ? categories : []}
+          placeholder={smartMode ? unifiedPlaceholder : inputMode === "chat" ? "Ask about your inbox..." : "Add a to-do..."}
+          categories={showCategoryDetection ? categories : []}
           contacts={contacts}
           onSearchContacts={searchContacts}
           onSearchEmails={searchEmails}
-          onCategoriesDetected={inputMode === "todo" ? handleCategoriesDetected : undefined}
+          onCategoriesDetected={showCategoryDetection ? handleCategoriesDetected : undefined}
           className="min-h-[160px] w-full py-5 pl-5 pr-4 text-base lg:min-h-[80px]"
         />
 
-        {/* Category pills — own row on mobile, inline on desktop */}
-        {inputMode === "todo" && (categories.length > 0 || onSaveCategories) && isMobile && (
+        {showCategoryDetection && (categories.length > 0 || onSaveCategories) && isMobile && (
           <div className="border-t border-border-100/40 px-3 py-1.5">
             <CategoryPills
               categories={categories}
@@ -339,9 +408,16 @@ export function UnifiedInput({
 
         {/* Mode toggle + category pills (desktop) / chat suggestions */}
         <div className="flex items-center gap-2 border-t border-border-100/40 px-3 py-2">
-          <ModeToggle mode={inputMode} onModeChange={setInputMode} />
+          {smartMode ? (
+            <IntentChip
+              intent={effectiveIntent}
+              onCycle={() => setIntentOverride(cycleIntent(effectiveIntent, hasActiveProject))}
+            />
+          ) : (
+            <ModeToggle mode={inputMode} onModeChange={setInputMode} />
+          )}
 
-          {inputMode === "chat" && suggestions.length > 0 && (
+          {!smartMode && inputMode === "chat" && suggestions.length > 0 && (
             <ScrollFade className="flex min-w-0 flex-1 items-center gap-1">
               {suggestions.slice(0, 3).map((s) => (
                 <button
@@ -360,7 +436,26 @@ export function UnifiedInput({
             </ScrollFade>
           )}
 
-          {inputMode === "todo" && (categories.length > 0 || onSaveCategories) && !isMobile && (
+          {smartMode && suggestions.length > 0 && effectiveIntent === "chat" && (
+            <ScrollFade className="flex min-w-0 flex-1 items-center gap-1">
+              {suggestions.slice(0, 3).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => {
+                    onStartConversation(buildConversationTitle(s), s);
+                    setInputValue("");
+                    setInputEntities([]);
+                  }}
+                  className="shrink-0 rounded-full bg-accent-100/8 px-3 py-1 text-xs font-medium text-accent-100 transition-all hover:bg-accent-100/15 lg:px-2.5 lg:py-0.5 lg:text-[11px]"
+                >
+                  {s}
+                </button>
+              ))}
+            </ScrollFade>
+          )}
+
+          {showCategoryDetection && (categories.length > 0 || onSaveCategories) && !isMobile && (
             <CategoryPills
               categories={categories}
               selectedCategories={selectedCategories}
@@ -374,7 +469,7 @@ export function UnifiedInput({
             />
           )}
 
-          {inputMode === "todo" && (
+          {effectiveIntent === "todo" && (
             <div className="ml-auto shrink-0">
               <DateQuickPicker
                 currentDate={scheduledDate}
@@ -388,6 +483,35 @@ export function UnifiedInput({
         </div>
       </div>
     </motion.div>
+  );
+}
+
+function IntentChip({
+  intent,
+  onCycle,
+  size = "default",
+  tabIndex,
+}: {
+  intent: InputIntent;
+  onCycle: () => void;
+  size?: "default" | "lg";
+  tabIndex?: number;
+}) {
+  const isLg = size === "lg";
+  return (
+    <button
+      type="button"
+      tabIndex={tabIndex}
+      onPointerDown={(e) => e.preventDefault()}
+      onClick={onCycle}
+      className={cn(
+        "shrink-0 rounded-lg border border-border-100/80 bg-background-100 font-medium text-foreground-200 transition-colors hover:bg-background-300",
+        isLg ? "px-3.5 py-1.5 text-[14px]" : "px-3 py-1.5 text-sm lg:px-2.5 lg:py-1 lg:text-[12px]",
+      )}
+      title="Tap to change type"
+    >
+      {intentLabel(intent)}
+    </button>
   );
 }
 

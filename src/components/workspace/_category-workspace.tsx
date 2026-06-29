@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { cn, getCategoryColor } from "../../lib";
+import { cn, getCategoryColor, useIsMobile } from "../../lib";
 import type { FeedItem, TodoEntity, TodoItem, UseWorkspaceReturn } from "../../lib";
 import { FeedComposer } from "./_feed-composer";
 import { FeedItemRenderer, PostedImageGallery } from "./_feed-item";
@@ -78,6 +78,7 @@ export function CategoryWorkspace({
   customCategoryColors,
   hideDesktopResources,
 }: CategoryWorkspaceProps) {
+  const isMobile = useIsMobile();
   const color = getCategoryColor(category, allCategories);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsBtnRef = useRef<HTMLButtonElement>(null);
@@ -467,7 +468,8 @@ export function CategoryWorkspace({
         }}
       />
 
-      {/* Composer */}
+      {/* Composer — desktop only; mobile uses global floating input */}
+      {!isMobile && (
       <FeedComposer
         category={category}
         allCategories={allCategories}
@@ -478,6 +480,7 @@ export function CategoryWorkspace({
         onCreateTodo={onCreateTodo}
         onStartChat={onStartChat}
       />
+      )}
 
       {/* Resources: inline collapsible on mobile, sidebar on desktop */}
       {(hasFiles || hasLinks) && !hideDesktopResources && (
