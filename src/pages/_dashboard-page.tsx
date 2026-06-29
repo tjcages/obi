@@ -1562,6 +1562,8 @@ export default function DashboardPage({ userId }: DashboardPageProps) {
   const [selectedAccountEmail, setSelectedAccountEmail] = useState<string | undefined>(undefined);
   const [slackModalRef, setSlackModalRef] = useState<TodoSlackRef[] | null>(null);
 
+  useFloatingInputBlockerEffect(!!selectedThreadId, "email-modal");
+
   useEffect(() => {
     setCustomCategoryColors(todoState.preferences.categoryColors ?? {});
   }, [todoState.preferences.categoryColors]);
