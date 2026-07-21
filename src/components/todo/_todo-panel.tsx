@@ -57,6 +57,10 @@ interface TodoPanelProps {
   completeTodo: (id: string) => Promise<void>;
   uncompleteTodo: (id: string) => Promise<void>;
   reorderTodos: (orderedIds: string[]) => Promise<void>;
+  /** Undo-aware "move to today" for a single overdue item. Falls back to updateTodo when absent. */
+  moveToToday?: (id: string) => void;
+  /** Undo-aware "move all overdue to today" — reverses as a single undo step. */
+  moveAllOverdueToToday?: (ids: string[]) => void;
   acceptSuggestion: (id: string) => Promise<void>;
   acceptAndCompleteSuggestion: (id: string) => Promise<void>;
   declineSuggestion: (id: string, reason?: string) => Promise<void>;
@@ -82,6 +86,8 @@ export function TodoPanel({
   completeTodo,
   uncompleteTodo,
   reorderTodos,
+  moveToToday,
+  moveAllOverdueToToday,
   acceptSuggestion,
   acceptAndCompleteSuggestion,
   declineSuggestion,
@@ -168,12 +174,14 @@ export function TodoPanel({
   }, [updateTodo]);
 
   const handleMoveToToday = useCallback((id: string) => {
+    if (moveToToday) { moveToToday(id); return; }
     void updateTodo(id, { scheduledDate: today });
-  }, [updateTodo, today]);
+  }, [moveToToday, updateTodo, today]);
 
   const handleMoveAllOverdueToToday = useCallback(() => {
+    if (moveAllOverdueToToday) { moveAllOverdueToToday(overdue.map((t) => t.id)); return; }
     for (const t of overdue) void updateTodo(t.id, { scheduledDate: today });
-  }, [updateTodo, overdue, today]);
+  }, [moveAllOverdueToToday, updateTodo, overdue, today]);
 
   const todoDates = useMemo(
     () => todos.filter((t) => t.scheduledDate && t.status !== "archived").map((t) => t.scheduledDate!),

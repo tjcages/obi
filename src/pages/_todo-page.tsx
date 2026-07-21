@@ -185,6 +185,11 @@ function RightColumnCategories({
   );
 }
 
+function localTodayStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -531,6 +536,67 @@ export default function TodoPage({ userId }: TodoPageProps) {
         label: isDesktop ? `Deleted "${todo.title.length > 30 ? `${todo.title.slice(0, 30)}…` : todo.title}"` : "Archived",
         onUndo: () => void todoState.restoreTodo(todo),
         onRedo: () => void todoState.deleteTodo(id),
+      });
+    },
+    [todoState, pushUndo],
+  );
+
+  // ── Todo add with undo ──
+
+  const handleCreateTodoWithUndo = useCallback(
+    async (input: Parameters<typeof todoState.createTodo>[0]) => {
+      const created = await todoState.createTodo(input);
+      if (created) {
+        pushUndo({
+          id: `todo-add-${created.id}-${Date.now()}`,
+          label: `Added "${truncateLabel(created.title)}"`,
+          onUndo: () => void todoState.deleteTodo(created.id),
+          onRedo: () => void todoState.restoreTodo(created),
+        });
+      }
+      return created;
+    },
+    [todoState, pushUndo],
+  );
+
+  // ── Move-to-today with undo (OFF-173 actions) ──
+
+  const handleMoveToTodayWithUndo = useCallback(
+    (id: string) => {
+      const todo = todoState.todos.find((t: TodoItem) => t.id === id);
+      if (!todo) return;
+      const prevDate = todo.scheduledDate;
+      const target = localTodayStr();
+      void todoState.updateTodo(id, { scheduledDate: target });
+      pushUndo({
+        id: `todo-move-${id}-${Date.now()}`,
+        label: `Moved "${truncateLabel(todo.title)}" to today`,
+        onUndo: () => void todoState.updateTodo(id, { scheduledDate: prevDate }),
+        onRedo: () => void todoState.updateTodo(id, { scheduledDate: target }),
+      });
+    },
+    [todoState, pushUndo],
+  );
+
+  // "Move all to today" must undo as a single step, restoring each item's prior date.
+  const handleMoveAllToTodayWithUndo = useCallback(
+    (ids: string[]) => {
+      const target = localTodayStr();
+      const prev = ids
+        .map((id) => todoState.todos.find((t: TodoItem) => t.id === id))
+        .filter((t): t is TodoItem => !!t)
+        .map((t) => ({ id: t.id, scheduledDate: t.scheduledDate }));
+      if (prev.length === 0) return;
+      for (const p of prev) void todoState.updateTodo(p.id, { scheduledDate: target });
+      pushUndo({
+        id: `todo-move-all-${Date.now()}`,
+        label: `Moved ${prev.length} to today`,
+        onUndo: () => {
+          for (const p of prev) void todoState.updateTodo(p.id, { scheduledDate: p.scheduledDate });
+        },
+        onRedo: () => {
+          for (const p of prev) void todoState.updateTodo(p.id, { scheduledDate: target });
+        },
       });
     },
     [todoState, pushUndo],
@@ -921,7 +987,7 @@ export default function TodoPage({ userId }: TodoPageProps) {
                       onUncompleteTodo={handleUncompleteTodo}
                       onDeleteTodo={handleDeleteTodoWithUndo}
                       onUpdateTodo={todoState.updateTodo}
-                      onCreateTodo={(params) => void todoState.createTodo(params)}
+                      onCreateTodo={(params) => void handleCreateTodoWithUndo(params)}
                       onReorderTodos={todoState.reorderTodos}
                       onStartChat={handleStartConversation}
                       onRenameCategory={(oldName, newName) => {
@@ -977,7 +1043,7 @@ export default function TodoPage({ userId }: TodoPageProps) {
                   activeCategory={activeCategoryWorkspace}
                   scheduledDateOverride={selectedCalDate}
                   onStartConversation={handleStartConversation}
-                  onCreateTodo={(params) => void todoState.createTodo({ ...params, scheduledDate: params.scheduledDate ?? selectedCalDate ?? undefined })}
+                  onCreateTodo={(params) => void handleCreateTodoWithUndo({ ...params, scheduledDate: params.scheduledDate ?? selectedCalDate ?? undefined })}
                   onSaveCategories={todoState.saveCategories}
                   onUploadFiles={async (files, cats) => { await uploadFilesToCategories(files, cats); }}
                   onAddNote={async (content, category) => { await addNoteToCategory(category, content); }}
@@ -1006,7 +1072,9 @@ export default function TodoPage({ userId }: TodoPageProps) {
                       lastScanResult={scanState.lastScanResult}
                       categories={todoState.preferences.todoCategories ?? []}
                       lastUsedCategory={todoState.lastUsedCategory}
-                      createTodo={(params) => todoState.createTodo({ ...params, scheduledDate: params.scheduledDate ?? selectedCalDate ?? undefined })}
+                      createTodo={(params) => handleCreateTodoWithUndo({ ...params, scheduledDate: params.scheduledDate ?? selectedCalDate ?? undefined })}
+                      moveToToday={handleMoveToTodayWithUndo}
+                      moveAllOverdueToToday={handleMoveAllToTodayWithUndo}
                       updateTodo={todoState.updateTodo}
                       deleteTodo={handleDeleteTodoWithUndo}
                       completeTodo={handleCompleteTodo}
