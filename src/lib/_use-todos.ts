@@ -130,6 +130,10 @@ export function useTodos(): UseTodosReturn {
   const mountedRef = useRef(true);
   const pendingMutations = useRef(0);
   const refreshSeqRef = useRef(0);
+  // Last ETag from GET /api/todos. Sent as If-None-Match on each poll so an
+  // unchanged active list returns 304 (no body) instead of re-downloading the
+  // whole list every 15 seconds.
+  const todosEtagRef = useRef<string | null>(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -140,8 +144,18 @@ export function useTodos(): UseTodosReturn {
     if (opts?.skipIfMutating && pendingMutations.current > 0) return;
     const seq = ++refreshSeqRef.current;
     try {
-      const res = await fetch("/api/todos", { cache: "no-store" });
+      const res = await fetch("/api/todos", {
+        cache: "no-store",
+        headers: todosEtagRef.current ? { "If-None-Match": todosEtagRef.current } : undefined,
+      });
+      // Nothing changed since the last poll — keep current state, skip the
+      // full re-download and the setTodos merge.
+      if (res.status === 304) {
+        if (mountedRef.current && seq === refreshSeqRef.current) setError(null);
+        return;
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const etag = res.headers.get("ETag");
       const data = (await res.json()) as { todos: TodoItem[]; preferences: TodoPreferences };
       const suggested = data.todos.filter((t) => t.status === "suggested");
       if (suggested.length > 0) {
@@ -152,6 +166,10 @@ export function useTodos(): UseTodosReturn {
         return;
       }
       if (pendingMutations.current > 0) return;
+      // Only advance the cached ETag once we actually commit this payload, so a
+      // discarded response (stale seq / in-flight mutation) can't cause the next
+      // poll to 304 against data we never applied.
+      if (etag) todosEtagRef.current = etag;
       setTodos((prev) => {
         const prevSuggested = prev.filter((t) => t.status === "suggested").length;
         if (prev.length === 0) {

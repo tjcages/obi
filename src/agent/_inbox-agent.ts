@@ -60,6 +60,7 @@ import {
   addSuggestedTodos,
   clearSuggestions,
   buildTodoPreferenceContext,
+  computeTodosEtag,
   getNextMidnight,
   type TodoItem,
   type TodoPreferences,
@@ -979,7 +980,14 @@ export class InboxAgent extends AIChatAgent<AgentEnv> {
         loadCategories(this.ctx.storage),
         loadCategoryColors(this.ctx.storage),
       ]);
-      return Response.json({ todos, preferences: { ...prefs, todoCategories: cats, categoryColors: catColors } });
+      const body = JSON.stringify({ todos, preferences: { ...prefs, todoCategories: cats, categoryColors: catColors } });
+      // Conditional GET: the client poll sends If-None-Match so an unchanged
+      // active list returns 304 (empty body) instead of a full re-download.
+      const etag = computeTodosEtag(body);
+      if (request.headers.get("If-None-Match") === etag) {
+        return new Response(null, { status: 304, headers: { ETag: etag } });
+      }
+      return new Response(body, { status: 200, headers: { "Content-Type": "application/json", ETag: etag } });
     }
     if (path === "/todos/categories" && request.method === "PUT") {
       const { categories } = (await request.json()) as { categories: string[] };

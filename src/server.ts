@@ -1846,16 +1846,24 @@ async function handleTodosProxy(
 
   const route = routeMap[path];
   if (route && route.methods.includes(request.method)) {
+    // Forward the conditional-GET header so the DO can answer 304 for an
+    // unchanged todos list (see /api/todos poll in _use-todos.ts).
+    const fwdHeaders: Record<string, string> = { "Content-Type": "application/json", "x-partykit-room": userId };
+    const ifNoneMatch = request.headers.get("If-None-Match");
+    if (ifNoneMatch) fwdHeaders["If-None-Match"] = ifNoneMatch;
     const doRes = await stub.fetch(
       new Request(`http://localhost${route.doPath}`, {
         method: request.method,
         body: request.method !== "GET" ? request.body : undefined,
-        headers: { "Content-Type": "application/json", "x-partykit-room": userId },
+        headers: fwdHeaders,
       }),
     );
-    return new Response(doRes.body, {
+    const outHeaders: Record<string, string> = { ...NO_CACHE_HEADERS };
+    const etag = doRes.headers.get("ETag");
+    if (etag) outHeaders["ETag"] = etag;
+    return new Response(doRes.status === 304 ? null : doRes.body, {
       status: doRes.status,
-      headers: NO_CACHE_HEADERS,
+      headers: outHeaders,
     });
   }
 

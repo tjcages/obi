@@ -81,6 +81,26 @@ export function generateTodoId(): string {
   return `todo_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+/**
+ * Compute a stable weak ETag for a serialized todos payload.
+ *
+ * Used for conditional GET on `/api/todos` so the 15-second client poll can
+ * send `If-None-Match` and receive a 304 (empty body) when nothing changed,
+ * instead of re-downloading the entire active list (with full sourceEmails /
+ * sourceSlack blobs) on every poll. Pure + deterministic so it can be unit
+ * tested and produces the same value for identical payloads.
+ */
+export function computeTodosEtag(serialized: string): string {
+  // FNV-1a 32-bit hash. Combined with the byte length it makes accidental
+  // collisions vanishingly unlikely for this use case.
+  let h = 0x811c9dc5;
+  for (let i = 0; i < serialized.length; i++) {
+    h ^= serialized.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return `W/"${(h >>> 0).toString(36)}-${serialized.length.toString(36)}"`;
+}
+
 export async function loadTodos(storage: DurableObjectStorage): Promise<TodoItem[]> {
   return (await storage.get<TodoItem[]>(STORAGE_KEY_TODOS)) ?? [];
 }
