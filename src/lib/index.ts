@@ -64,6 +64,8 @@ export {
 export { useSmartInput } from "./_use-smart-input";
 export {
   cn,
+  getTodayLocalISO,
+  isOverdue,
   getCategoryColor,
   getMonoCategoryColor,
   getMonoCategories,

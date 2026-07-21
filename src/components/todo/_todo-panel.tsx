@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { cn, getCategoryColor, useIsMobile, useSmartInput } from "../../lib";
+import { cn, getCategoryColor, isOverdue, useIsMobile, useSmartInput } from "../../lib";
 import type { TodoItem, TodoEmailRef, TodoEntity } from "../../lib";
 import { SmartInput, type SmartEntity } from "../smart-input";
 import { List, ListItem } from "../ui/_list";
@@ -112,8 +112,9 @@ export function TodoPanel({
   const groupAnchor = activeDate ?? today;
   const isViewingToday = groupAnchor === today;
 
-  const { suggested, todayTodos, upcoming, unscheduled, completed } = useMemo(() => {
+  const { suggested, overdue, todayTodos, upcoming, unscheduled, completed } = useMemo(() => {
     const suggested: TodoItem[] = [];
+    const overdueItems: TodoItem[] = [];
     const todayItems: TodoItem[] = [];
     const upcomingItems: TodoItem[] = [];
     const unscheduledItems: TodoItem[] = [];
@@ -130,9 +131,11 @@ export function TodoPanel({
       } else if (t.status === "pending") {
         if (!t.scheduledDate) {
           unscheduledItems.push(t);
+        } else if (isViewingToday && isOverdue(t, today)) {
+          // Past-due pending items roll forward into a visible Overdue lane
+          // instead of lingering unseen on their original date.
+          overdueItems.push(t);
         } else if (t.scheduledDate === groupAnchor) {
-          todayItems.push(t);
-        } else if (isViewingToday && t.scheduledDate < today) {
           todayItems.push(t);
         } else if (t.scheduledDate > groupAnchor) {
           upcomingItems.push(t);
@@ -140,6 +143,10 @@ export function TodoPanel({
       }
     }
 
+    overdueItems.sort((a, b) => {
+      const dateCompare = (a.scheduledDate ?? "").localeCompare(b.scheduledDate ?? "");
+      return dateCompare !== 0 ? dateCompare : a.sortOrder - b.sortOrder;
+    });
     todayItems.sort((a, b) => a.sortOrder - b.sortOrder);
     unscheduledItems.sort((a, b) => a.sortOrder - b.sortOrder);
     upcomingItems.sort((a, b) => {
@@ -148,7 +155,7 @@ export function TodoPanel({
     });
     completedItems.sort((a, b) => (b.completedAt ?? "").localeCompare(a.completedAt ?? ""));
 
-    return { suggested, todayTodos: todayItems, upcoming: upcomingItems, unscheduled: unscheduledItems, completed: completedItems };
+    return { suggested, overdue: overdueItems, todayTodos: todayItems, upcoming: upcomingItems, unscheduled: unscheduledItems, completed: completedItems };
   }, [todos, groupAnchor, isViewingToday, today]);
 
 
@@ -160,13 +167,21 @@ export function TodoPanel({
     void updateTodo(id, updates);
   }, [updateTodo]);
 
+  const handleMoveToToday = useCallback((id: string) => {
+    void updateTodo(id, { scheduledDate: today });
+  }, [updateTodo, today]);
+
+  const handleMoveAllOverdueToToday = useCallback(() => {
+    for (const t of overdue) void updateTodo(t.id, { scheduledDate: today });
+  }, [updateTodo, overdue, today]);
+
   const todoDates = useMemo(
     () => todos.filter((t) => t.scheduledDate && t.status !== "archived").map((t) => t.scheduledDate!),
     [todos],
   );
 
   const calendarTodo = calendarTodoId ? todos.find((t) => t.id === calendarTodoId) : null;
-  const totalActive = todayTodos.length + upcoming.length + unscheduled.length;
+  const totalActive = overdue.length + todayTodos.length + upcoming.length + unscheduled.length;
   const isEmpty = suggested.length === 0 && totalActive === 0 && completed.length === 0;
   if (loading) {
     return (
@@ -228,6 +243,63 @@ export function TodoPanel({
                   onUpdate={handleUpdate}
                   onEmailClick={onEmailClick}
                   onSlackClick={onSlackClick}
+                />
+              </ListItem>
+            ))}
+          </List>
+        </div>
+      )}
+
+      {/* Overdue — rolled-forward pending items, shown above Today */}
+      {overdue.length > 0 && (
+        <div>
+          <div className="mb-2 flex items-center gap-1.5 px-1">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500 dark:text-red-400">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            <span className="text-sm font-medium uppercase tracking-widest text-red-600 lg:text-xs dark:text-red-400">
+              Overdue
+            </span>
+            <span className="text-xs text-red-500/70 lg:text-[10px]">
+              ({overdue.length})
+            </span>
+            <button
+              type="button"
+              onClick={handleMoveAllOverdueToToday}
+              className="ml-auto rounded-lg px-2 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
+            >
+              Move all to today
+            </button>
+          </div>
+          <List gap="gap-0">
+            {overdue.map((todo) => (
+              <ListItem
+                key={todo.id}
+                itemId={todo.id}
+                onSwipeLeft={() => deleteTodo(todo.id)}
+                swipeLeftLabel="Delete"
+                onSwipeRight={() => completeTodo(todo.id)}
+                swipeRightLabel="Done"
+                rightSwipeVariant="complete"
+                compactSwipe
+                swipeBgClass="bg-background-100"
+                swipeContainerClass="rounded-xl"
+              >
+                <TodoItemComponent
+                  todo={todo}
+                  categories={categories}
+                  compactView
+                  disableSwipe
+                  onComplete={completeTodo}
+                  onUncomplete={uncompleteTodo}
+                  onDelete={deleteTodo}
+                  onDateChange={handleDateChange}
+                  onUpdate={handleUpdate}
+                  onMoveToToday={handleMoveToToday}
+                  onEmailClick={onEmailClick}
+                  onSlackClick={onSlackClick}
+                  onOpenWorkspace={onOpenWorkspace}
                 />
               </ListItem>
             ))}

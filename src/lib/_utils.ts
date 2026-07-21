@@ -1,9 +1,33 @@
 import { type ClassValue, clsx } from "clsx";
 import type { CSSProperties } from "react";
 import { twMerge } from "tailwind-merge";
+import type { TodoItem } from "./_use-todos";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+// ── Overdue classification ────────────────────────────────
+// A pending todo scheduled before today shouldn't linger unseen on an old
+// date — it surfaces in the "Overdue" lane. The scheduled date is preserved
+// (overdue is a view, not a mutation); moving to today is an explicit action.
+
+/** Today's local calendar date as "YYYY-MM-DD". */
+export function getTodayLocalISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/**
+ * A todo is overdue when it's still pending and its scheduled date is
+ * strictly before today's local date. Pure — pass `today` (local ISO) to
+ * keep grouping stable across a render pass.
+ */
+export function isOverdue(
+  todo: Pick<TodoItem, "status" | "scheduledDate">,
+  today: string = getTodayLocalISO(),
+): boolean {
+  return todo.status === "pending" && todo.scheduledDate != null && todo.scheduledDate < today;
 }
 
 export interface CategoryColor {

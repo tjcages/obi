@@ -8,6 +8,8 @@ import {
   useIsMobile,
   useTodos,
   getCategoryColor,
+  getTodayLocalISO,
+  isOverdue,
   setCustomCategoryColors,
   type CategoryWorkspace as WorkspaceData,
   type ConversationSummary,
@@ -465,7 +467,17 @@ function TodoWidget({
   onEmailClick?: (threadId: string, accountEmail?: string) => void;
   onSlackClick?: (slackRef: TodoItem["sourceSlack"]) => void;
 }) {
-  const pending = useMemo(() => todos.filter((t) => t.status === "pending"), [todos]);
+  const today = getTodayLocalISO();
+  const overdue = useMemo(
+    () => todos
+      .filter((t) => isOverdue(t, today))
+      .sort((a, b) => (a.scheduledDate ?? "").localeCompare(b.scheduledDate ?? "")),
+    [todos, today],
+  );
+  const pending = useMemo(
+    () => todos.filter((t) => t.status === "pending" && !isOverdue(t, today)),
+    [todos, today],
+  );
   const completed = useMemo(
     () => todos
       .filter((t) => t.status === "completed")
@@ -583,6 +595,58 @@ function TodoWidget({
         </div>
       )}
 
+      {/* Overdue — rolled-forward pending items, shown above Today */}
+      {overdue.length > 0 && (
+        <div className="mb-2">
+          <div className="mb-1 flex items-center gap-1.5 px-1">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500 dark:text-red-400">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            <span className="text-[11px] font-medium uppercase tracking-widest text-red-600 dark:text-red-400">
+              Overdue
+            </span>
+            <span className="text-[10px] text-red-500/70">({overdue.length})</span>
+            <button
+              type="button"
+              onClick={() => { for (const t of overdue) onDateChange(t.id, today); }}
+              className="ml-auto rounded-lg px-2 py-1 text-[11px] font-medium text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
+            >
+              Move all to today
+            </button>
+          </div>
+          <div className="-mx-1">
+            <AnimatePresence initial={false}>
+              {overdue.map((todo) => (
+                <motion.div
+                  key={todo.id}
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+                  className="overflow-hidden"
+                >
+                  <TodoItemComponent
+                    todo={todo}
+                    categories={categories}
+                    hideTodayBadge
+                    compactView
+                    onComplete={onComplete}
+                    onUncomplete={onUncomplete}
+                    onDelete={onDelete}
+                    onDateChange={onDateChange}
+                    onUpdate={onUpdate}
+                    onMoveToToday={(id) => onDateChange(id, today)}
+                    onEmailClick={onEmailClick}
+                    onSlackClick={onSlackClick}
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        </div>
+      )}
+
       {/* Todo list — uses the full TodoItemComponent */}
       <div className="-mx-1">
         <AnimatePresence initial={false}>
@@ -613,7 +677,7 @@ function TodoWidget({
           ))}
         </AnimatePresence>
       </div>
-      {preview.length === 0 && completed.length === 0 && (
+      {preview.length === 0 && overdue.length === 0 && completed.length === 0 && (
         <p className="py-4 text-center text-[13px] text-foreground-300/50">All clear</p>
       )}
 
@@ -702,10 +766,10 @@ function TodoWidget({
         </div>
       )}
 
-      {(pending.length > 0 || completed.length > 0) && (
+      {(pending.length > 0 || overdue.length > 0 || completed.length > 0) && (
         <p className="mt-4 text-center text-[12px] text-foreground-300/40">
-          {pending.length > 0
-            ? `${pending.length} pending${completed.length > 0 ? ` · ${completed.length} completed` : ""}`
+          {pending.length + overdue.length > 0
+            ? `${pending.length + overdue.length} pending${completed.length > 0 ? ` · ${completed.length} completed` : ""}`
             : `${completed.length} completed`}
         </p>
       )}
