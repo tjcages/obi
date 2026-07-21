@@ -115,6 +115,8 @@ export function SmartInput({
         "autocapitalize": "sentences",
       },
       handleKeyDown: (_view, event) => {
+        if (event.isComposing || event.keyCode === 229) return false;
+
         if (showAutocomplete && popoverRef.current) {
           const handled = popoverRef.current.onKeyDown(event as unknown as React.KeyboardEvent);
           if (handled) {
