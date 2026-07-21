@@ -120,6 +120,22 @@ export default function App({
               fontFamily: "var(--font-sans)",
               whiteSpace: "nowrap",
             } as React.CSSProperties,
+            actionButtonStyle: {
+              background: "var(--color-background-100)",
+              color: "var(--color-foreground-100)",
+              borderRadius: "100px",
+              padding: "0 16px",
+              minHeight: "44px",
+              minWidth: "44px",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              fontSize: "13px",
+              fontWeight: 600,
+              fontFamily: "var(--font-sans)",
+              cursor: "pointer",
+            } as React.CSSProperties,
           }),
         }}
       />

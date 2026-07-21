@@ -536,6 +536,27 @@ export default function TodoPage({ userId }: TodoPageProps) {
     [todoState, pushUndo],
   );
 
+  // ── Todo create with undo ──
+
+  const handleCreateTodoWithUndo = useCallback(
+    async (input: Parameters<typeof todoState.createTodo>[0]) => {
+      const created = await todoState.createTodo(input);
+      if (!created) return created;
+
+      pushUndo({
+        id: `todo-add-${created.id}-${Date.now()}`,
+        label: isDesktop
+          ? `Added "${created.title.length > 30 ? `${created.title.slice(0, 30)}…` : created.title}"`
+          : "Added",
+        onUndo: () => void todoState.deleteTodo(created.id),
+        onRedo: () => void todoState.restoreTodo(created),
+      });
+
+      return created;
+    },
+    [todoState, pushUndo, isDesktop],
+  );
+
   // ── Conversation archive with undo ──
 
   const handleArchiveConversationWithUndo = useCallback(
@@ -921,7 +942,7 @@ export default function TodoPage({ userId }: TodoPageProps) {
                       onUncompleteTodo={handleUncompleteTodo}
                       onDeleteTodo={handleDeleteTodoWithUndo}
                       onUpdateTodo={todoState.updateTodo}
-                      onCreateTodo={(params) => void todoState.createTodo(params)}
+                      onCreateTodo={(params) => void handleCreateTodoWithUndo(params)}
                       onReorderTodos={todoState.reorderTodos}
                       onStartChat={handleStartConversation}
                       onRenameCategory={(oldName, newName) => {
@@ -977,7 +998,7 @@ export default function TodoPage({ userId }: TodoPageProps) {
                   activeCategory={activeCategoryWorkspace}
                   scheduledDateOverride={selectedCalDate}
                   onStartConversation={handleStartConversation}
-                  onCreateTodo={(params) => void todoState.createTodo({ ...params, scheduledDate: params.scheduledDate ?? selectedCalDate ?? undefined })}
+                  onCreateTodo={(params) => void handleCreateTodoWithUndo({ ...params, scheduledDate: params.scheduledDate ?? selectedCalDate ?? undefined })}
                   onSaveCategories={todoState.saveCategories}
                   onUploadFiles={async (files, cats) => { await uploadFilesToCategories(files, cats); }}
                   onAddNote={async (content, category) => { await addNoteToCategory(category, content); }}
@@ -1006,7 +1027,7 @@ export default function TodoPage({ userId }: TodoPageProps) {
                       lastScanResult={scanState.lastScanResult}
                       categories={todoState.preferences.todoCategories ?? []}
                       lastUsedCategory={todoState.lastUsedCategory}
-                      createTodo={(params) => todoState.createTodo({ ...params, scheduledDate: params.scheduledDate ?? selectedCalDate ?? undefined })}
+                      createTodo={(params) => handleCreateTodoWithUndo({ ...params, scheduledDate: params.scheduledDate ?? selectedCalDate ?? undefined })}
                       updateTodo={todoState.updateTodo}
                       deleteTodo={handleDeleteTodoWithUndo}
                       completeTodo={handleCompleteTodo}
