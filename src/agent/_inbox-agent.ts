@@ -60,6 +60,7 @@ import {
   addSuggestedTodos,
   clearSuggestions,
   buildTodoPreferenceContext,
+  getTodosVersion,
   getNextMidnight,
   type TodoItem,
   type TodoPreferences,
@@ -972,14 +973,21 @@ export class InboxAgent extends AIChatAgent<AgentEnv> {
       return Response.json({ ok: true, config: { provider: "tavily", hasApiKey: false } });
     }
     // ── Todo endpoints ──
+    // Lightweight version probe — reads only the counter, not the todos blob.
+    // Must be matched before the dynamic /todos/:id routes below so "version"
+    // is never treated as a todo id.
+    if (path === "/todos/version" && request.method === "GET") {
+      return Response.json({ version: await getTodosVersion(this.ctx.storage) });
+    }
     if (path === "/todos" && request.method === "GET") {
-      const [todos, prefs, cats, catColors] = await Promise.all([
+      const [todos, prefs, cats, catColors, version] = await Promise.all([
         loadTodos(this.ctx.storage),
         loadPreferences(this.ctx.storage),
         loadCategories(this.ctx.storage),
         loadCategoryColors(this.ctx.storage),
+        getTodosVersion(this.ctx.storage),
       ]);
-      return Response.json({ todos, preferences: { ...prefs, todoCategories: cats, categoryColors: catColors } });
+      return Response.json({ todos, version, preferences: { ...prefs, todoCategories: cats, categoryColors: catColors } });
     }
     if (path === "/todos/categories" && request.method === "PUT") {
       const { categories } = (await request.json()) as { categories: string[] };

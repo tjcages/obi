@@ -65,6 +65,7 @@ const STORAGE_KEY_ARCHIVED = "todos:archived";
 const STORAGE_KEY_PREFERENCES = "todos:preferences";
 const STORAGE_KEY_CATEGORIES = "todos:categories";
 const STORAGE_KEY_CATEGORY_COLORS = "todos:category-colors";
+const STORAGE_KEY_TODOS_VERSION = "todos:version";
 
 const MAX_ARCHIVED = 200;
 const MAX_PATTERNS = 50;
@@ -87,6 +88,22 @@ export async function loadTodos(storage: DurableObjectStorage): Promise<TodoItem
 
 export async function saveTodos(storage: DurableObjectStorage, items: TodoItem[]): Promise<void> {
   await storage.put(STORAGE_KEY_TODOS, items);
+  // Every todo mutation funnels through this central write, so bumping here
+  // guarantees the monotonic version advances for creates/updates/deletes/
+  // completes/reorders/accepts/declines, agent-suggested todos, and the
+  // midnight archive sweep. The client polls this counter to decide whether a
+  // full refresh is needed (OFF-180).
+  await bumpTodosVersion(storage);
+}
+
+export async function getTodosVersion(storage: DurableObjectStorage): Promise<number> {
+  return (await storage.get<number>(STORAGE_KEY_TODOS_VERSION)) ?? 0;
+}
+
+export async function bumpTodosVersion(storage: DurableObjectStorage): Promise<number> {
+  const next = ((await storage.get<number>(STORAGE_KEY_TODOS_VERSION)) ?? 0) + 1;
+  await storage.put(STORAGE_KEY_TODOS_VERSION, next);
+  return next;
 }
 
 export async function loadArchivedTodos(storage: DurableObjectStorage): Promise<TodoItem[]> {

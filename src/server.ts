@@ -1836,6 +1836,7 @@ async function handleTodosProxy(
   // Direct route mappings
   const routeMap: Record<string, { doPath: string; methods: string[] }> = {
     "/api/todos": { doPath: "/todos", methods: ["GET", "POST"] },
+    "/api/todos/version": { doPath: "/todos/version", methods: ["GET"] },
     "/api/todos/reorder": { doPath: "/todos/reorder", methods: ["PUT"] },
     "/api/todos/archived": { doPath: "/todos/archived", methods: ["GET"] },
     "/api/todos/preferences": { doPath: "/todos/preferences", methods: ["GET", "PUT"] },

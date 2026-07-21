@@ -130,6 +130,11 @@ export function useTodos(): UseTodosReturn {
   const mountedRef = useRef(true);
   const pendingMutations = useRef(0);
   const refreshSeqRef = useRef(0);
+  // Last todos version we've observed from the server. The 15s poll compares
+  // the cheap /api/todos/version counter against this and only does a full
+  // refresh when it changed, so a single checkbox no longer re-downloads the
+  // entire active todos blob every cycle (OFF-180).
+  const lastVersionRef = useRef<number | null>(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -142,7 +147,8 @@ export function useTodos(): UseTodosReturn {
     try {
       const res = await fetch("/api/todos", { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { todos: TodoItem[]; preferences: TodoPreferences };
+      const data = (await res.json()) as { todos: TodoItem[]; preferences: TodoPreferences; version?: number };
+      if (typeof data.version === "number") lastVersionRef.current = data.version;
       const suggested = data.todos.filter((t) => t.status === "suggested");
       if (suggested.length > 0) {
         console.log(`[useTodos] refresh seq=${seq} (current=${refreshSeqRef.current}): ${data.todos.length} todos, ${suggested.length} suggested`, suggested.map((s) => s.title));
@@ -181,11 +187,30 @@ export function useTodos(): UseTodosReturn {
 
   useEffect(() => { void refresh(); }, [refresh]);
 
-  // Poll for new agent suggestions every 15 seconds.
-  // Skip polls while mutations are in flight to avoid overwriting optimistic state.
+  // Poll for changes every 15 seconds, but gate the expensive full refresh on a
+  // cheap server-side version counter. We only re-download the todos blob when
+  // something actually changed (a new agent suggestion, the midnight archive
+  // sweep, an edit from another tab, etc.). Skip while mutations are in flight
+  // to avoid racing optimistic state.
   useEffect(() => {
     const interval = setInterval(() => {
-      void refresh({ skipIfMutating: true });
+      void (async () => {
+        if (pendingMutations.current > 0) return;
+        try {
+          const res = await fetch("/api/todos/version", { cache: "no-store" });
+          if (!res.ok) return;
+          const { version } = (await res.json()) as { version?: number };
+          if (typeof version !== "number") return;
+          // Re-check the mutation guard after the await so we don't clobber an
+          // optimistic update that started while the probe was in flight.
+          if (pendingMutations.current > 0) return;
+          if (lastVersionRef.current === null || version !== lastVersionRef.current) {
+            await refresh({ skipIfMutating: true });
+          }
+        } catch {
+          // Fail safe: skip this cycle rather than forcing a full download.
+        }
+      })();
     }, 15_000);
     return () => clearInterval(interval);
   }, [refresh]);
