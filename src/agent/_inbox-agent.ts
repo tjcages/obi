@@ -85,6 +85,7 @@ import {
   loadWorkspace,
   buildWorkspaceContext,
 } from "./_workspace";
+import { buildSocialWritingRules } from "./_social-writing-rules";
 import { scanInboxForTodos, type ScanResult } from "./_inbox-scanner";
 import { scanSlackForTodos, type SlackScanResult } from "./_slack-scanner";
 import {
@@ -586,6 +587,7 @@ function buildSystemPrompt(
   todoContext?: string,
   inboxSnapshot?: string,
   workspaceContext?: string,
+  workspaceName?: string,
   hasWebSearch?: boolean,
 ): string {
   let system = assembleBasePrompt(config, hasWebSearch);
@@ -613,6 +615,11 @@ function buildSystemPrompt(
 
   if (workspaceContext) {
     system += `\n\n${workspaceContext}`;
+  }
+
+  const socialWritingRules = buildSocialWritingRules(workspaceName);
+  if (socialWritingRules) {
+    system += `\n\n${socialWritingRules}`;
   }
 
   const todoCapabilities = `\n\nTO-DO CAPABILITIES:
@@ -1899,7 +1906,7 @@ export class InboxAgent extends AIChatAgent<AgentEnv> {
     const effectiveInboxSnapshot = categoryScope ? undefined : (inboxSnapshot || undefined);
 
     const hasWebSearch = !!searchConfig.apiKey;
-    system = buildSystemPrompt(promptConfig, memory, accountInfoForPrompt, todoContext || undefined, effectiveInboxSnapshot, workspaceContext, hasWebSearch);
+    system = buildSystemPrompt(promptConfig, memory, accountInfoForPrompt, todoContext || undefined, effectiveInboxSnapshot, workspaceContext, wsName, hasWebSearch);
     console.log("[chat] System prompt built, length:", system.length, "category-scoped:", !!categoryScope);
 
     const conversationId = this.name ?? "default";
